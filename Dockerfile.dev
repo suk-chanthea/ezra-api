@@ -1,0 +1,25 @@
+# Full Go image (not alpine) for development
+FROM golang:1.25
+
+# Install dependencies and dev tools
+RUN apt-get update && apt-get install -y \
+    git curl bash vim build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy go.mod and go.sum first
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy entire project
+COPY . .
+
+# Install Air for hot reload
+RUN go install github.com/air-verse/air@latest
+
+# Expose API port
+EXPOSE 8090
+
+# Run Air with config
+CMD ["air", "-c", "./config/air.toml"]

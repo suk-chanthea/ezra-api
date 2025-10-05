@@ -1,0 +1,13 @@
+# Air config file
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ./cmd/main.go"
+  bin = "tmp/main"
+  include_ext = ["go"]
+  exclude_dir = ["vendor", "tmp", "migrate"]
+  delay = 1000 # ms
+
+[log]
+  time = true
