@@ -4,7 +4,6 @@ import (
     "github.com/suk-chanthea/ezra/domain"
     "github.com/suk-chanthea/ezra/service"
     "net/http"
-    "time"
 
     "github.com/gin-gonic/gin"
 )
@@ -20,17 +19,25 @@ func NewEventController(s service.EventService) *EventController {
 func (c *EventController) Create(ctx *gin.Context) {
     var input domain.Event
     if err := ctx.ShouldBindJSON(&input); err != nil {
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+        return
+    }
+
+    // get user_id from JWT
+    userID, exists := ctx.Get("user_id")
+    if !exists {
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+        return
+    }
+    input.UserID = userID.(uint) // assign correct FK
+
+    // save event (timestamps handled by GORM)
+    if err := c.service.CreateEvent(input); err != nil {
         ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
-    input.CreatedAt = time.Now()
-    input.UpdatedAt = time.Now()
 
-    if err := c.service.CreateEvent(input); err != nil {
-        ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-    ctx.JSON(http.StatusCreated, input)
+    ctx.JSON(http.StatusCreated, gin.H{"message": "event created successfully"})
 }
 
 func (c *EventController) GetAll(ctx *gin.Context) {

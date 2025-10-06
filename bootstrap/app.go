@@ -17,12 +17,21 @@ func SetupRouter(db *gorm.DB, secret string) *gin.Engine {
 	//router.SetTrustedProxies([]string{"127.0.0.1"}) // only trust localhost
 	// Public route
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "api work"})
+		c.JSON(200, gin.H{"message": "api work..."})
 	})
 
-	// API group with auth middleware
+	// Repositories & Services
+	userRepo := repository.NewUserRepository(db)
+	authService := service.NewAuthService(userRepo, secret)
+	authController := controller.NewAuthController(authService)
+
+	// Public routes
+	router.POST("/register", authController.Register)
+	router.POST("/login", authController.Login)
+
+	// Protected API group
 	api := router.Group("/api")
-	api.Use(middleware.AuthMiddleware(db, secret))
+	api.Use(middleware.JWTMiddleware(authService)) // <- pass AuthService
 
 	// Event feature
 	eventRepo := repository.NewEventRepository(db)

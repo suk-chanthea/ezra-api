@@ -23,6 +23,7 @@ services:
     depends_on:
       - postgres
       - redis
+    command: air                     # run air for hot reload
 
   postgres:
     image: postgres:15
@@ -45,7 +46,7 @@ services:
 
   nginx:
     image: nginx:1.25
-    container_name: nginx
+    container_name: nginx_dev
     volumes:
       - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
