@@ -6,6 +6,7 @@ import (
     "net/http"
 
 	"github.com/gin-gonic/gin"
+    "github.com/go-playground/validator/v10"
 )
 
 type EventController struct {
@@ -19,9 +20,30 @@ func NewEventController(s service.EventService) *EventController {
 func (c *EventController) Create(ctx *gin.Context) {
     var input domain.Event
     if err := ctx.ShouldBindJSON(&input); err != nil {
+        // Check if it's a validation error
+        if validationErrors, ok := err.(validator.ValidationErrors); ok {
+            // Only return the first error as a string
+            e := validationErrors[0] // first error
+            var message string
+            switch e.Tag() {
+            case "required":
+                message = e.Field() + " is required"
+            case "min":
+                message = e.Field() + " is too short"
+            case "max":
+                message = e.Field() + " is too long"
+            case "gtfield":
+                message = e.Field() + " must be after " + e.Param()
+            default:
+                message = "invalid " + e.Field()
+            }
+            ctx.JSON(http.StatusBadRequest, gin.H{"errors": message})
+            return
+        }
         ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
         return
     }
+    
 
     // get user_id from JWT
     userID, exists := ctx.Get("user_id")
