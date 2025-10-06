@@ -1,11 +1,11 @@
 package controller
 
 import (
-    "github.com/suk-chanthea/ezra/domain"
-    "github.com/suk-chanthea/ezra/service"
+	"github.com/suk-chanthea/ezra/domain"
+	"github.com/suk-chanthea/ezra/service"
     "net/http"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 type EventController struct {

@@ -10,7 +10,7 @@ type Event struct {
     Location    string      `json:"location"`
     StartTime   time.Time   `json:"start_time"`
     EndTime     time.Time   `json:"end_time"`
-    UserID      uint        `json:"-"`
+    UserID      uint        `json:"user_id"`
     CreatedAt   time.Time   `gorm:"autoCreateTime" json:"-"` // GORM sets automatically
     UpdatedAt   time.Time   `gorm:"autoUpdateTime" json:"-"`
 }

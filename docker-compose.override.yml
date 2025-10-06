@@ -23,7 +23,6 @@ services:
     depends_on:
       - postgres
       - redis
-    command: air                     # run air for hot reload
 
   postgres:
     image: postgres:15

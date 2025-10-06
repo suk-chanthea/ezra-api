@@ -8,7 +8,7 @@ import (
 type UserRepository interface {
     GetByUsername(username string) (*domain.User, error)
     Create(user *domain.User) error
-	UpdateToken(id int64, token string) error
+	UpdateToken(id uint, token string) error
 }
 
 type userRepository struct {
@@ -19,7 +19,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
     return &userRepository{db}
 }
 
-func (r *userRepository) UpdateToken(id int64, token string) error {
+func (r *userRepository) UpdateToken(id uint, token string) error {
     return r.db.Model(&domain.User{}).
         Where("id = ?", id).
         Updates(map[string]interface{}{
