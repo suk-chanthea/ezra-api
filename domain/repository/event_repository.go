@@ -1,0 +1,13 @@
+package repository
+
+import "github.com/suk-chanthea/ezra/domain/entity"
+
+// EventRepository defines the interface for event data operations
+type EventRepository interface {
+	Save(event *entity.Event) error
+	FindAll() ([]*entity.Event, error)
+	FindByID(id uint) (*entity.Event, error)
+	FindByUserID(userID uint) ([]*entity.Event, error)
+	Update(event *entity.Event) error
+	Delete(id uint) error
+}

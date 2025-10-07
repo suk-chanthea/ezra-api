@@ -1,0 +1,69 @@
+package handler
+
+import (
+	"net/http"
+
+	"github.com/suk-chanthea/ezra/domain/dto"
+	"github.com/suk-chanthea/ezra/usecase"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+)
+
+type AuthHandler struct {
+	authUseCase usecase.AuthUseCase
+}
+
+func NewAuthHandler(uc usecase.AuthUseCase) *AuthHandler {
+	return &AuthHandler{authUseCase: uc}
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req dto.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			var message string
+			switch e.Tag() {
+			case "required":
+				message = e.Field() + " is required"
+			case "min":
+				message = e.Field() + " is too short"
+			case "max":
+				message = e.Field() + " is too long"
+			case "email":
+				message = e.Field() + " must be a valid email"
+			default:
+				message = "invalid " + e.Field()
+			}
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Errors: message})
+			return
+		}
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
+		return
+	}
+
+	response, err := h.authUseCase.Register(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req dto.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid request"})
+		return
+	}
+
+	response, err := h.authUseCase.Login(&req)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
