@@ -1,0 +1,136 @@
+package handler
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/suk-chanthea/ezra/domain/dto"
+	"github.com/suk-chanthea/ezra/usecase"
+
+	"github.com/gin-gonic/gin"
+)
+
+type MusicHandler struct {
+	musicUseCase usecase.MusicUseCase
+}
+
+func NewMusicHandler(uc usecase.MusicUseCase) *MusicHandler {
+	return &MusicHandler{musicUseCase: uc}
+}
+
+type CreateMusicRequest struct {
+	Title string `json:"title" binding:"required,min=1,max=255"`
+	Cover string `json:"cover" binding:"required,min=1,max=255"`
+	Audio string `json:"audio" binding:"omitempty,max=255"`
+}
+
+func (h *MusicHandler) Create(c *gin.Context) {
+	var req CreateMusicRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	if err := h.musicUseCase.CreateMusic(req.Title, req.Cover, req.Audio, userID.(uint)); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, dto.SuccessResponse{Message: "music created successfully"})
+}
+
+func (h *MusicHandler) GetAll(c *gin.Context) {
+	musics, err := h.musicUseCase.GetAllMusics()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, musics)
+}
+
+func (h *MusicHandler) GetByID(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id"})
+		return
+	}
+
+	music, err := h.musicUseCase.GetMusicByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "music not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, music)
+}
+
+func (h *MusicHandler) GetByUser(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	musics, err := h.musicUseCase.GetMusicsByUserID(userID.(uint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, musics)
+}
+
+func (h *MusicHandler) Update(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id"})
+		return
+	}
+
+	var req CreateMusicRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	if err := h.musicUseCase.UpdateMusic(uint(id), req.Title, req.Cover, req.Audio, userID.(uint)); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "music updated successfully"})
+}
+
+func (h *MusicHandler) Delete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	if err := h.musicUseCase.DeleteMusic(uint(id), userID.(uint)); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "music deleted successfully"})
+}
