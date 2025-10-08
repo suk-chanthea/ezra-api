@@ -20,6 +20,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PORT: 8090
+      POSTGRES_URL: postgres://postgres:secret@postgres:5432/ezradb?sslmode=disable
+      SECRET: paracletus
     depends_on:
       - postgres
       - redis
@@ -39,7 +41,7 @@ services:
 
   redis:
     image: redis:7
-    container_name: ezre-redis-dev
+    container_name: ezra-redis-dev
     ports:
       - "6379:6379"
 

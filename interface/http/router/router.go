@@ -10,17 +10,20 @@ import (
 
 type Router struct {
 	authHandler  *handler.AuthHandler
+	musicHandler *handler.MusicHandler
 	eventHandler *handler.EventHandler
 	authUseCase  usecase.AuthUseCase
 }
 
 func NewRouter(
 	authHandler *handler.AuthHandler,
+	musicHandler *handler.MusicHandler,
 	eventHandler *handler.EventHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
 		authHandler:  authHandler,
+		musicHandler: musicHandler,
 		eventHandler: eventHandler,
 		authUseCase:  authUseCase,
 	}
@@ -43,6 +46,17 @@ func (r *Router) Setup() *gin.Engine {
 	api := router.Group("/api")
 	api.Use(middleware.JWTMiddleware(r.authUseCase))
 	{
+		// Music routes
+		musics := api.Group("/musics")
+		{
+			musics.POST("/", r.musicHandler.Create)
+			musics.GET("/", r.musicHandler.GetAll)
+			musics.GET("/user", r.musicHandler.GetByUser)
+			musics.GET("/:id", r.musicHandler.GetByID)
+			musics.PUT("/:id", r.musicHandler.Update)
+			musics.DELETE("/:id", r.musicHandler.Delete)
+		}
+
 		// Event routes
 		events := api.Group("/events")
 		{
