@@ -10,4 +10,9 @@ type EventRepository interface {
 	FindByUserID(userID uint) ([]*entity.Event, error)
 	Update(event *entity.Event) error
 	Delete(id uint) error
+	
+	// Methods for managing event-music relationships
+	AddMusicsToEvent(eventID uint, musicIDs []uint) error
+	RemoveMusicsFromEvent(eventID uint, musicIDs []uint) error
+	GetEventMusics(eventID uint) ([]*entity.Music, error)
 }

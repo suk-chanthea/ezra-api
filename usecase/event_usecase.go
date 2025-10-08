@@ -35,6 +35,7 @@ func (uc *eventUseCase) CreateEvent(req *dto.CreateEventRequest, userID uint) er
 		req.StartTime,
 		req.EndTime,
 		userID,
+		req.MusicIDs,  // Add music IDs
 	)
 
 	// Validate
@@ -74,7 +75,7 @@ func (uc *eventUseCase) GetEventsByUserID(userID uint) ([]*dto.EventResponse, er
 }
 
 func (uc *eventUseCase) entityToResponse(event *entity.Event) *dto.EventResponse {
-	return &dto.EventResponse{
+	response := &dto.EventResponse{
 		ID:        event.ID,
 		Title:     event.Title,
 		Content:   event.Content,
@@ -86,6 +87,24 @@ func (uc *eventUseCase) entityToResponse(event *entity.Event) *dto.EventResponse
 		CreatedAt: event.CreatedAt,
 		UpdatedAt: event.UpdatedAt,
 	}
+	
+	// Convert musics
+	if len(event.Musics) > 0 {
+		response.Musics = make([]*dto.MusicResponse, len(event.Musics))
+		for i, music := range event.Musics {
+			response.Musics[i] = &dto.MusicResponse{
+				ID:        music.ID,
+				Title:     music.Title,
+				Cover:     music.Cover,
+				Audio:     music.Audio,
+				UserID:    music.UserID,
+				CreatedAt: music.CreatedAt,
+				UpdatedAt: music.UpdatedAt,
+			}
+		}
+	}
+	
+	return response
 }
 
 func (uc *eventUseCase) entitiesToResponses(events []*entity.Event) []*dto.EventResponse {

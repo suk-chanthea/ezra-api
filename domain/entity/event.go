@@ -12,12 +12,14 @@ type Event struct {
 	StartTime time.Time
 	EndTime   time.Time
 	UserID    uint
+	Musics    []*Music  // Add this field for related musics
+	MusicIDs  []uint    // Add this for input
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
 // NewEvent creates a new event entity
-func NewEvent(title, content, cover, location string, startTime, endTime time.Time, userID uint) *Event {
+func NewEvent(title, content, cover, location string, startTime, endTime time.Time, userID uint, musicIDs []uint) *Event {
 	return &Event{
 		Title:     title,
 		Content:   content,
@@ -26,6 +28,7 @@ func NewEvent(title, content, cover, location string, startTime, endTime time.Ti
 		StartTime: startTime,
 		EndTime:   endTime,
 		UserID:    userID,
+		MusicIDs:  musicIDs,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

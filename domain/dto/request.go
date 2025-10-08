@@ -24,4 +24,5 @@ type CreateEventRequest struct {
 	Location  string    `json:"location" binding:"required,min=1,max=200"`
 	StartTime time.Time `json:"start_time" binding:"required"`
 	EndTime   time.Time `json:"end_time" binding:"required,gtfield=StartTime"`
+	MusicIDs  []uint    `json:"music_ids"`  // Add this field
 }
