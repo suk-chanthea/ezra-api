@@ -8,6 +8,8 @@ tmp_dir = "tmp"
   include_ext = ["go"]
   exclude_dir = ["vendor", "tmp", "migrate"]
   delay = 1000 # ms
+  poll = true           # ADD THIS
+  poll_interval = 500   # ADD THIS (check every 500ms)
 
 [log]
   time = true
