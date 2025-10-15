@@ -1,16 +1,48 @@
-# Ignore environment and secret files
+# Environment and secret files
 .env.production
+.env.local
+.env
 
-# Ignore logs and temp files
+# SSL certificates (never commit these!)
+config/ssl/*.pem
+config/ssl/*.key
+config/ssl/*.crt
+
+# Keep the ssl directory structure
+!config/ssl/.gitkeep
+
+# Logs and temp files
 *.log
 logs/
 tmp/
 .cache/
 
-# Ignore IDE and editor settings
+# Backups (never commit database backups!)
+backups/*.sql
+backups/*.sql.gz
+
+# Keep backup directory structure
+!backups/.gitkeep
+
+# IDE and editor settings
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Ignore system files
+# System files
 .DS_Store
 Thumbs.db
+
+# Development files (you removed these)
+docker-compose.override.yml
+Dockerfile.dev
+
+# Go build artifacts
+tmp/
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Production Deployment Script for Ezra API
-# Usage: ./deploy.sh [start|stop|restart|logs|backup]
+# Usage: ./deploy.sh [start|stop|restart|logs|backup|restore|health]
 
 set -e
 
@@ -9,16 +9,34 @@ ENV_FILE=".env.production"
 COMPOSE_FILE="docker-compose.yml"
 BACKUP_DIR="./backups"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# Colors - Using printf for better compatibility
+RED=$(printf '\033[0;31m')
+GREEN=$(printf '\033[0;32m')
+YELLOW=$(printf '\033[1;33m')
+BLUE=$(printf '\033[0;34m')
+NC=$(printf '\033[0m') # No Color
+
+# Function to print colored messages
+print_error() {
+    echo "${RED}Error: $1${NC}"
+}
+
+print_success() {
+    echo "${GREEN}$1${NC}"
+}
+
+print_warning() {
+    echo "${YELLOW}$1${NC}"
+}
+
+print_info() {
+    echo "${BLUE}$1${NC}"
+}
 
 # Check if .env.production exists
 check_env() {
     if [ ! -f "$ENV_FILE" ]; then
-        echo -e "${RED}Error: $ENV_FILE not found!${NC}"
+        print_error "$ENV_FILE not found!"
         echo "Please create $ENV_FILE from .env.production.example"
         exit 1
     fi
@@ -33,24 +51,26 @@ load_env() {
 
 # Start services
 start() {
-    echo -e "${GREEN}Starting Ezra API (Production)...${NC}"
+    print_info "Starting Ezra API (Production)..."
     check_env
     load_env
     docker-compose -f "$COMPOSE_FILE" up -d --build
-    echo -e "${GREEN}Services started successfully!${NC}"
+    print_success "Services started successfully!"
+    echo ""
     echo "View logs: ./deploy.sh logs"
+    echo "Check health: ./deploy.sh health"
 }
 
 # Stop services
 stop() {
-    echo -e "${YELLOW}Stopping Ezra API...${NC}"
+    print_warning "Stopping Ezra API..."
     docker-compose -f "$COMPOSE_FILE" down
-    echo -e "${GREEN}Services stopped successfully!${NC}"
+    print_success "Services stopped successfully!"
 }
 
 # Restart services
 restart() {
-    echo -e "${YELLOW}Restarting Ezra API...${NC}"
+    print_warning "Restarting Ezra API..."
     stop
     sleep 2
     start
@@ -68,7 +88,7 @@ logs() {
 
 # Backup database
 backup() {
-    echo -e "${GREEN}Creating database backup...${NC}"
+    print_info "Creating database backup..."
     check_env
     load_env
     
@@ -78,17 +98,17 @@ backup() {
     docker exec ezra-postgres-prod pg_dump -U "${DB_USER:-postgres}" "${DB_NAME:-ezradb}" > "$BACKUP_FILE"
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Backup created: $BACKUP_FILE${NC}"
+        print_success "Backup created: $BACKUP_FILE"
         
         # Compress backup
         gzip "$BACKUP_FILE"
-        echo -e "${GREEN}Backup compressed: ${BACKUP_FILE}.gz${NC}"
+        print_success "Backup compressed: ${BACKUP_FILE}.gz"
         
         # Keep only last 7 backups
-        ls -t "$BACKUP_DIR"/*.gz | tail -n +8 | xargs -r rm
-        echo -e "${GREEN}Old backups cleaned up (keeping last 7)${NC}"
+        ls -t "$BACKUP_DIR"/*.gz 2>/dev/null | tail -n +8 | xargs -r rm
+        print_info "Old backups cleaned up (keeping last 7)"
     else
-        echo -e "${RED}Backup failed!${NC}"
+        print_error "Backup failed!"
         exit 1
     fi
 }
@@ -97,17 +117,17 @@ backup() {
 restore() {
     BACKUP_FILE=$1
     if [ -z "$BACKUP_FILE" ]; then
-        echo -e "${RED}Error: Please specify backup file${NC}"
+        print_error "Please specify backup file"
         echo "Usage: ./deploy.sh restore <backup_file.sql.gz>"
         exit 1
     fi
     
     if [ ! -f "$BACKUP_FILE" ]; then
-        echo -e "${RED}Error: Backup file not found: $BACKUP_FILE${NC}"
+        print_error "Backup file not found: $BACKUP_FILE"
         exit 1
     fi
     
-    echo -e "${YELLOW}Restoring database from: $BACKUP_FILE${NC}"
+    print_warning "Restoring database from: $BACKUP_FILE"
     check_env
     load_env
     
@@ -119,36 +139,50 @@ restore() {
     fi
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Database restored successfully!${NC}"
+        print_success "Database restored successfully!"
     else
-        echo -e "${RED}Database restore failed!${NC}"
+        print_error "Database restore failed!"
         exit 1
     fi
 }
 
 # Check service health
 health() {
-    echo -e "${GREEN}Checking service health...${NC}"
+    print_info "Checking service health..."
+    echo ""
     docker-compose -f "$COMPOSE_FILE" ps
     echo ""
-    echo -e "${GREEN}API Health:${NC}"
-    curl -s http://localhost:8090/ping || echo -e "${RED}API not responding${NC}"
+    print_info "API Health Check:"
+    
+    # Try to ping the API
+    if curl -s http://localhost:80/ping > /dev/null 2>&1; then
+        print_success "✅ API is responding"
+        curl -s http://localhost:80/ping | jq . 2>/dev/null || curl -s http://localhost:80/ping
+    else
+        print_error "❌ API is not responding"
+    fi
 }
 
 # Show usage
 usage() {
-    echo "Ezra API Deployment Script"
+    echo "${GREEN}Ezra API Deployment Script${NC}"
     echo ""
     echo "Usage: ./deploy.sh [command]"
     echo ""
     echo "Commands:"
-    echo "  start          Start all services"
-    echo "  stop           Stop all services"
-    echo "  restart        Restart all services"
-    echo "  logs [service] View logs (optional: specify service)"
-    echo "  backup         Create database backup"
-    echo "  restore <file> Restore database from backup"
-    echo "  health         Check service health"
+    echo "  ${BLUE}start${NC}          Start all services"
+    echo "  ${BLUE}stop${NC}           Stop all services"
+    echo "  ${BLUE}restart${NC}        Restart all services"
+    echo "  ${BLUE}logs${NC} [service] View logs (optional: specify service)"
+    echo "  ${BLUE}backup${NC}         Create database backup"
+    echo "  ${BLUE}restore${NC} <file> Restore database from backup"
+    echo "  ${BLUE}health${NC}         Check service health"
+    echo ""
+    echo "Examples:"
+    echo "  ./deploy.sh start"
+    echo "  ./deploy.sh logs api"
+    echo "  ./deploy.sh backup"
+    echo "  ./deploy.sh restore backups/ezra_db_20241015_120000.sql.gz"
     echo ""
 }
 

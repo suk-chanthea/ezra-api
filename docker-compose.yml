@@ -8,8 +8,8 @@ services:
     container_name: ezra-api-prod
     restart: unless-stopped
     environment:
-      PORT: 8090
-      POSTGRES_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-secret}@postgres:5432/${DB_NAME:-ezradb}?sslmode=disable
+      PORT: ${PORT:-8090}
+      POSTGRES_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-secret}@postgres:${DB_PORT:-5432}/${DB_NAME:-ezradb}?sslmode=disable
       SECRET: ${SECRET_KEY:-paracletus}
       GIN_MODE: release
     depends_on:
@@ -53,10 +53,10 @@ services:
         max-file: "3"
 
   redis:
-    image: redis:8-alpine
+    image: redis:7-alpine
     container_name: ezra-redis-prod
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
