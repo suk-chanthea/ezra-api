@@ -2,6 +2,7 @@
 -- 1. Drop triggers
 -- ============================
 
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
 DROP TRIGGER IF EXISTS update_events_updated_at ON events;
 DROP TRIGGER IF EXISTS update_music_sheets_updated_at ON music_sheets;
 DROP TRIGGER IF EXISTS update_musics_updated_at ON musics;
@@ -13,6 +14,9 @@ DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
 -- ============================
 -- 2. Drop tables in reverse dependency order
 -- ============================
+
+-- Drop bookings (depends on events and users)
+DROP TABLE IF EXISTS bookings CASCADE;
 
 -- Drop junction table first (depends on events and musics)
 DROP TABLE IF EXISTS event_musics CASCADE;
@@ -39,6 +43,11 @@ DROP TABLE IF EXISTS roles CASCADE;
 -- ============================
 -- 3. Drop indexes (optional, mostly handled by DROP TABLE)
 -- ============================
+
+-- Bookings indexes
+DROP INDEX IF EXISTS idx_bookings_event_id;
+DROP INDEX IF EXISTS idx_bookings_user_id;
+DROP INDEX IF EXISTS idx_bookings_status;
 
 -- Junction table indexes
 DROP INDEX IF EXISTS idx_event_musics_event_id;

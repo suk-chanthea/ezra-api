@@ -46,3 +46,28 @@ type SuccessResponse struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
+
+// UserResponse represents user output (without sensitive data)
+type UserResponse struct {
+	ID        uint      `json:"id"`
+	Username  string    `json:"username"`
+	Fullname  string    `json:"fullname"`
+	Profile   string    `json:"profile,omitempty"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// BookingResponse represents booking output
+type BookingResponse struct {
+	ID        uint           `json:"id"`
+	EventID   uint           `json:"event_id"`
+	UserID    uint           `json:"user_id"`
+	Status    string         `json:"status"`
+	Notes     string         `json:"notes,omitempty"`
+	Event     *EventResponse `json:"event,omitempty"`
+	User      *UserResponse  `json:"user,omitempty"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}

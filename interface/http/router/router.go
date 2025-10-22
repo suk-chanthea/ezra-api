@@ -9,23 +9,26 @@ import (
 )
 
 type Router struct {
-	authHandler  *handler.AuthHandler
-	musicHandler *handler.MusicHandler
-	eventHandler *handler.EventHandler
-	authUseCase  usecase.AuthUseCase
+	authHandler    *handler.AuthHandler
+	musicHandler   *handler.MusicHandler
+	eventHandler   *handler.EventHandler
+	bookingHandler *handler.BookingHandler
+	authUseCase    usecase.AuthUseCase
 }
 
 func NewRouter(
 	authHandler *handler.AuthHandler,
 	musicHandler *handler.MusicHandler,
 	eventHandler *handler.EventHandler,
+	bookingHandler *handler.BookingHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
-		authHandler:  authHandler,
-		musicHandler: musicHandler,
-		eventHandler: eventHandler,
-		authUseCase:  authUseCase,
+		authHandler:    authHandler,
+		musicHandler:   musicHandler,
+		eventHandler:   eventHandler,
+		bookingHandler: bookingHandler,
+		authUseCase:    authUseCase,
 	}
 }
 
@@ -62,6 +65,22 @@ func (r *Router) Setup() *gin.Engine {
 		{
 			events.POST("/", r.eventHandler.Create)
 			events.GET("/", r.eventHandler.GetAll)
+			events.GET("/user", r.eventHandler.GetByUser)
+			events.GET("/:id", r.eventHandler.GetByID)
+			events.PUT("/:id", r.eventHandler.Update)
+			events.DELETE("/:id", r.eventHandler.Delete)
+		}
+
+		// Booking routes
+		bookings := api.Group("/bookings")
+		{
+			bookings.POST("/", r.bookingHandler.Create)
+			bookings.GET("/", r.bookingHandler.GetAll)
+			bookings.GET("/user", r.bookingHandler.GetByUser)
+			bookings.GET("/event/:event_id", r.bookingHandler.GetByEvent)
+			bookings.GET("/:id", r.bookingHandler.GetByID)
+			bookings.PUT("/:id", r.bookingHandler.Update)
+			bookings.DELETE("/:id", r.bookingHandler.Delete)
 		}
 	}
 

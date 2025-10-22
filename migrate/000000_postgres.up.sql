@@ -136,7 +136,26 @@ CREATE INDEX IF NOT EXISTS idx_event_musics_event_id ON event_musics(event_id);
 CREATE INDEX IF NOT EXISTS idx_event_musics_music_id ON event_musics(music_id);
 
 -- ============================
--- 9. Shared auto-update function
+-- 9. Bookings table (Event Registrations)
+-- ============================
+CREATE TABLE IF NOT EXISTS bookings (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(event_id, user_id),
+    CHECK (status IN ('pending', 'confirmed', 'cancelled'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_event_id ON bookings(event_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+
+-- ============================
+-- 10. Shared auto-update function
 -- ============================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -147,7 +166,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================
--- 10. Triggers for auto-updating
+-- 11. Triggers for auto-updating
 -- ============================
 
 -- roles table
@@ -196,5 +215,12 @@ EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_events_updated_at ON events;
 CREATE TRIGGER update_events_updated_at
 BEFORE UPDATE ON events
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- bookings table
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
+CREATE TRIGGER update_bookings_updated_at
+BEFORE UPDATE ON bookings
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();

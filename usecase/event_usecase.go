@@ -13,6 +13,8 @@ type EventUseCase interface {
 	GetAllEvents() ([]*dto.EventResponse, error)
 	GetEventByID(id uint) (*dto.EventResponse, error)
 	GetEventsByUserID(userID uint) ([]*dto.EventResponse, error)
+	UpdateEvent(id uint, req *dto.UpdateEventRequest, userID uint) error
+	DeleteEvent(id uint, userID uint) error
 }
 
 type eventUseCase struct {
@@ -113,4 +115,70 @@ func (uc *eventUseCase) entitiesToResponses(events []*entity.Event) []*dto.Event
 		responses[i] = uc.entityToResponse(event)
 	}
 	return responses
+}
+
+func (uc *eventUseCase) UpdateEvent(id uint, req *dto.UpdateEventRequest, userID uint) error {
+	// Check if event exists and belongs to user
+	existingEvent, err := uc.eventRepo.FindByID(id)
+	if err != nil {
+		return errors.New("event not found")
+	}
+
+	if existingEvent.UserID != userID {
+		return errors.New("unauthorized to update this event")
+	}
+
+	// Update event fields
+	existingEvent.Title = req.Title
+	existingEvent.Content = req.Content
+	existingEvent.Cover = req.Cover
+	existingEvent.Location = req.Location
+	existingEvent.StartTime = req.StartTime
+	existingEvent.EndTime = req.EndTime
+
+	// Validate
+	if !existingEvent.IsValid() {
+		return errors.New("invalid event data")
+	}
+
+	// Update the event
+	if err := uc.eventRepo.Update(existingEvent); err != nil {
+		return err
+	}
+
+	// Update music associations if provided
+	if req.MusicIDs != nil {
+		// Remove old music associations
+		oldMusics, err := uc.eventRepo.GetEventMusics(id)
+		if err == nil && len(oldMusics) > 0 {
+			oldMusicIDs := make([]uint, len(oldMusics))
+			for i, music := range oldMusics {
+				oldMusicIDs[i] = music.ID
+			}
+			uc.eventRepo.RemoveMusicsFromEvent(id, oldMusicIDs)
+		}
+
+		// Add new music associations
+		if len(req.MusicIDs) > 0 {
+			if err := uc.eventRepo.AddMusicsToEvent(id, req.MusicIDs); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (uc *eventUseCase) DeleteEvent(id uint, userID uint) error {
+	// Check if event exists and belongs to user
+	existingEvent, err := uc.eventRepo.FindByID(id)
+	if err != nil {
+		return errors.New("event not found")
+	}
+
+	if existingEvent.UserID != userID {
+		return errors.New("unauthorized to delete this event")
+	}
+
+	return uc.eventRepo.Delete(id)
 }

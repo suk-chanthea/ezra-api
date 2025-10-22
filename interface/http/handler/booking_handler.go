@@ -11,16 +11,16 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type EventHandler struct {
-	eventUseCase usecase.EventUseCase
+type BookingHandler struct {
+	bookingUseCase usecase.BookingUseCase
 }
 
-func NewEventHandler(uc usecase.EventUseCase) *EventHandler {
-	return &EventHandler{eventUseCase: uc}
+func NewBookingHandler(uc usecase.BookingUseCase) *BookingHandler {
+	return &BookingHandler{bookingUseCase: uc}
 }
 
-func (h *EventHandler) Create(c *gin.Context) {
-	var req dto.CreateEventRequest
+func (h *BookingHandler) Create(c *gin.Context) {
+	var req dto.CreateBookingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
 			e := validationErrors[0]
@@ -28,12 +28,6 @@ func (h *EventHandler) Create(c *gin.Context) {
 			switch e.Tag() {
 			case "required":
 				message = e.Field() + " is required"
-			case "min":
-				message = e.Field() + " is too short"
-			case "max":
-				message = e.Field() + " is too long"
-			case "gtfield":
-				message = e.Field() + " must be after " + e.Param()
 			default:
 				message = "invalid " + e.Field()
 			}
@@ -51,65 +45,81 @@ func (h *EventHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Create event
-	if err := h.eventUseCase.CreateEvent(&req, userID.(uint)); err != nil {
+	// Create booking
+	if err := h.bookingUseCase.CreateBooking(&req, userID.(uint)); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, dto.SuccessResponse{Message: "event created successfully"})
+	c.JSON(http.StatusCreated, dto.SuccessResponse{Message: "booking created successfully"})
 }
 
-func (h *EventHandler) GetAll(c *gin.Context) {
-	events, err := h.eventUseCase.GetAllEvents()
+func (h *BookingHandler) GetAll(c *gin.Context) {
+	bookings, err := h.bookingUseCase.GetAllBookings()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, events)
+	c.JSON(http.StatusOK, bookings)
 }
 
-func (h *EventHandler) GetByID(c *gin.Context) {
+func (h *BookingHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id"})
 		return
 	}
 
-	event, err := h.eventUseCase.GetEventByID(uint(id))
+	booking, err := h.bookingUseCase.GetBookingByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "event not found"})
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "booking not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, event)
+	c.JSON(http.StatusOK, booking)
 }
 
-func (h *EventHandler) GetByUser(c *gin.Context) {
+func (h *BookingHandler) GetByEvent(c *gin.Context) {
+	eventID, err := strconv.ParseUint(c.Param("event_id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid event id"})
+		return
+	}
+
+	bookings, err := h.bookingUseCase.GetBookingsByEventID(uint(eventID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, bookings)
+}
+
+func (h *BookingHandler) GetByUser(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
 		return
 	}
 
-	events, err := h.eventUseCase.GetEventsByUserID(userID.(uint))
+	bookings, err := h.bookingUseCase.GetBookingsByUserID(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, events)
+	c.JSON(http.StatusOK, bookings)
 }
 
-func (h *EventHandler) Update(c *gin.Context) {
+func (h *BookingHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id"})
 		return
 	}
 
-	var req dto.UpdateEventRequest
+	var req dto.UpdateBookingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
 			e := validationErrors[0]
@@ -117,12 +127,8 @@ func (h *EventHandler) Update(c *gin.Context) {
 			switch e.Tag() {
 			case "required":
 				message = e.Field() + " is required"
-			case "min":
-				message = e.Field() + " is too short"
-			case "max":
-				message = e.Field() + " is too long"
-			case "gtfield":
-				message = e.Field() + " must be after " + e.Param()
+			case "oneof":
+				message = e.Field() + " must be one of: pending, confirmed, cancelled"
 			default:
 				message = "invalid " + e.Field()
 			}
@@ -139,15 +145,15 @@ func (h *EventHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.eventUseCase.UpdateEvent(uint(id), &req, userID.(uint)); err != nil {
+	if err := h.bookingUseCase.UpdateBooking(uint(id), &req, userID.(uint)); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "event updated successfully"})
+	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "booking updated successfully"})
 }
 
-func (h *EventHandler) Delete(c *gin.Context) {
+func (h *BookingHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid id"})
@@ -160,10 +166,11 @@ func (h *EventHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.eventUseCase.DeleteEvent(uint(id), userID.(uint)); err != nil {
+	if err := h.bookingUseCase.DeleteBooking(uint(id), userID.(uint)); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "event deleted successfully"})
+	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "booking deleted successfully"})
 }
+
