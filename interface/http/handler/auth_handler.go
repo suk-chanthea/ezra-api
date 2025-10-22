@@ -67,3 +67,65 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// Get user_id from JWT middleware
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	if err := h.authUseCase.Logout(userID.(uint)); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "logged out successfully"})
+}
+
+func (h *AuthHandler) DeleteUser(c *gin.Context) {
+	// Get user_id from JWT middleware
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	if err := h.authUseCase.DeleteUser(userID.(uint)); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse{Message: "user deleted successfully"})
+}
+
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	var req dto.GoogleLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			var message string
+			switch e.Tag() {
+			case "required":
+				message = e.Field() + " is required"
+			case "email":
+				message = e.Field() + " must be a valid email"
+			default:
+				message = "invalid " + e.Field()
+			}
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Errors: message})
+			return
+		}
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
+		return
+	}
+
+	response, err := h.authUseCase.GoogleLogin(req.GoogleID, req.Email, req.Fullname, req.ProfilePicture)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

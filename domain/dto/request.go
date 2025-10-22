@@ -49,3 +49,11 @@ type UpdateBookingRequest struct {
 	Status string `json:"status" binding:"required,oneof=pending confirmed cancelled"`
 	Notes  string `json:"notes"`
 }
+
+// GoogleLoginRequest represents Google OAuth login input
+type GoogleLoginRequest struct {
+	GoogleID       string `json:"google_id" binding:"required"`
+	Email          string `json:"email" binding:"required,email"`
+	Fullname       string `json:"fullname" binding:"required"`
+	ProfilePicture string `json:"profile_picture"`
+}

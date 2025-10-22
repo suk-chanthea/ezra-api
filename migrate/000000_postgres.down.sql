@@ -72,7 +72,7 @@ DROP INDEX IF EXISTS idx_tokens_expires_at;
 
 -- Users indexes
 DROP INDEX IF EXISTS idx_users_email;
-DROP INDEX IF EXISTS idx_users_role_id;
+DROP INDEX IF EXISTS idx_users_provider_id;
 
 -- Roles indexes
 DROP INDEX IF EXISTS idx_roles_name;

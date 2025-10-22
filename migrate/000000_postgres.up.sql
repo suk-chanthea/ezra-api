@@ -21,7 +21,7 @@ INSERT INTO roles (name, description, permissions) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================
--- 2. Users table (with role_id FK)
+-- 2. Users table (with role_id FK and OAuth support)
 -- ============================
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -29,14 +29,17 @@ CREATE TABLE IF NOT EXISTS users (
     fullname VARCHAR(100) NOT NULL,
     profile VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE RESTRICT DEFAULT 3, -- default to 'user' role
+    password VARCHAR(255),
+    role VARCHAR(20) DEFAULT 'user',
+    token VARCHAR(255),
+    provider VARCHAR(50) DEFAULT 'local',
+    provider_id VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_provider_id ON users(provider, provider_id);
 
 -- ============================
 -- 3. Tokens table (for multi-device/session support)

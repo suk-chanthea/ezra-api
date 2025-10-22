@@ -41,14 +41,19 @@ func (r *Router) Setup() *gin.Engine {
 		c.JSON(200, gin.H{"message": "api work..."})
 	})
 
-	// Public routes
+	// Public routes (no authentication required)
 	router.POST("/register", r.authHandler.Register)
 	router.POST("/login", r.authHandler.Login)
+	router.POST("/auth/google", r.authHandler.GoogleLogin)
 
-	// Protected API group
+	// Protected API group (authentication required)
 	api := router.Group("/api")
 	api.Use(middleware.JWTMiddleware(r.authUseCase))
 	{
+		// User/Auth routes
+		api.POST("/logout", r.authHandler.Logout)
+		api.DELETE("/user", r.authHandler.DeleteUser)
+
 		// Music routes
 		musics := api.Group("/musics")
 		{

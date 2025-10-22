@@ -15,6 +15,9 @@ import (
 type AuthUseCase interface {
 	Register(req *dto.RegisterRequest) (*dto.AuthResponse, error)
 	Login(req *dto.LoginRequest) (*dto.AuthResponse, error)
+	Logout(userID uint) error
+	DeleteUser(userID uint) error
+	GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error)
 	ValidateToken(token string) (*jwt.Token, error)
 }
 
@@ -98,6 +101,67 @@ func (uc *authUseCase) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 
 	return &dto.AuthResponse{
 		Token: token,
+	}, nil
+}
+
+func (uc *authUseCase) Logout(userID uint) error {
+	// Clear the user's token
+	return uc.userRepo.UpdateToken(userID, "")
+}
+
+func (uc *authUseCase) DeleteUser(userID uint) error {
+	// Check if user exists
+	user, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// Delete the user
+	if err := uc.userRepo.Delete(user.ID); err != nil {
+		return errors.New("failed to delete user")
+	}
+
+	return nil
+}
+
+func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error) {
+	// Check if user already exists with this Google ID
+	user, err := uc.userRepo.FindByProviderID("google", googleID)
+	
+	if err != nil {
+		// User doesn't exist, check if email is already registered
+		existingUser, _ := uc.userRepo.FindByEmail(email)
+		if existingUser != nil {
+			// Email exists but with different provider
+			if existingUser.Provider != "google" {
+				return nil, errors.New("email already registered with different provider")
+			}
+		}
+
+		// Create new user with Google OAuth
+		user = entity.NewOAuthUser(email, fullname, "google", googleID)
+		user.Profile = profilePicture
+
+		// Save to database
+		if err := uc.userRepo.Save(user); err != nil {
+			return nil, err
+		}
+	}
+
+	// Generate JWT
+	token, err := uc.generateToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update token in database
+	if err := uc.userRepo.UpdateToken(user.ID, token); err != nil {
+		return nil, err
+	}
+
+	return &dto.AuthResponse{
+		Message: "google login successful",
+		Token:   token,
 	}, nil
 }
 
