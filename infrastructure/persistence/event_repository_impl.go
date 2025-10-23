@@ -18,7 +18,7 @@ type EventModel struct {
 	StartTime time.Time    `gorm:"not null"`
 	EndTime   time.Time    `gorm:"not null"`
 	UserID    uint         `gorm:"not null"`
-	Musics    []MusicModel `gorm:"many2many:event_musics;"`
+	Musics    []MusicModel `gorm:"many2many:event_musics;joinForeignKey:EventID;joinReferences:MusicID"`
 	CreatedAt time.Time    `gorm:"autoCreateTime"`
 	UpdatedAt time.Time    `gorm:"autoUpdateTime"`
 }

@@ -12,6 +12,7 @@ services:
     ports:
       - "8090:8090"
     environment:
+      TZ: Asia/Phnom_Penh
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: postgres
@@ -30,6 +31,7 @@ services:
     image: postgres:15
     container_name: ezra-postgres-dev
     environment:
+      TZ: Asia/Phnom_Penh
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: ezradb
@@ -42,6 +44,8 @@ services:
   redis:
     image: redis:7
     container_name: ezra-redis-dev
+    environment:
+      TZ: Asia/Phnom_Penh
     ports:
       - "6379:6379"
 

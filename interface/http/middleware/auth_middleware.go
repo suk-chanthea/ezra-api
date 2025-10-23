@@ -42,7 +42,17 @@ func JWTMiddleware(authUseCase usecase.AuthUseCase) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			c.Set("user_id", uint(sub))
+
+			userID := uint(sub)
+
+			// Verify token against database (check if user has logged out)
+			if err := authUseCase.VerifyTokenInDatabase(userID, tokenStr); err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				c.Abort()
+				return
+			}
+
+			c.Set("user_id", userID)
 			c.Set("username", claims["username"])
 			c.Set("role", claims["role"])
 		}

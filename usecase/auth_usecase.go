@@ -19,6 +19,7 @@ type AuthUseCase interface {
 	DeleteUser(userID uint) error
 	GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error)
 	ValidateToken(token string) (*jwt.Token, error)
+	VerifyTokenInDatabase(userID uint, token string) error
 }
 
 type authUseCase struct {
@@ -127,7 +128,7 @@ func (uc *authUseCase) DeleteUser(userID uint) error {
 func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error) {
 	// Check if user already exists with this Google ID
 	user, err := uc.userRepo.FindByProviderID("google", googleID)
-	
+
 	if err != nil {
 		// User doesn't exist, check if email is already registered
 		existingUser, _ := uc.userRepo.FindByEmail(email)
@@ -169,6 +170,25 @@ func (uc *authUseCase) ValidateToken(tokenStr string) (*jwt.Token, error) {
 	return jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		return uc.secretKey, nil
 	})
+}
+
+func (uc *authUseCase) VerifyTokenInDatabase(userID uint, token string) error {
+	// Find user by ID
+	user, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// Check if token matches the one in database
+	if user.Token == "" {
+		return errors.New("user has been logged out")
+	}
+
+	if user.Token != token {
+		return errors.New("token has been invalidated")
+	}
+
+	return nil
 }
 
 func (uc *authUseCase) generateToken(user *entity.User) (string, error) {

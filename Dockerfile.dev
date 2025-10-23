@@ -3,8 +3,12 @@ FROM golang:1.25
 
 # Install dependencies and dev tools
 RUN apt-get update && apt-get install -y \
-    git curl bash vim build-essential \
+    git curl bash vim build-essential tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+# Set timezone
+ENV TZ=Asia/Phnom_Penh
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app
 

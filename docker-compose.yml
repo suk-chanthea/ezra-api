@@ -8,6 +8,7 @@ services:
     container_name: ezra-api-prod
     restart: unless-stopped
     environment:
+      TZ: Asia/Phnom_Penh
       PORT: ${PORT:-8090}
       POSTGRES_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-secret}@postgres:${DB_PORT:-5432}/${DB_NAME:-ezradb}?sslmode=disable
       SECRET: ${SECRET_KEY:-paracletus}
@@ -30,6 +31,7 @@ services:
     container_name: ezra-postgres-prod
     restart: unless-stopped
     environment:
+      TZ: Asia/Phnom_Penh
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
       POSTGRES_DB: ${DB_NAME:-ezradb}
@@ -56,6 +58,8 @@ services:
     image: redis:7-alpine
     container_name: ezra-redis-prod
     restart: unless-stopped
+    environment:
+      TZ: Asia/Phnom_Penh
     command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -78,6 +82,8 @@ services:
     image: nginx:1.25-alpine
     container_name: ezra-nginx-prod
     restart: unless-stopped
+    environment:
+      TZ: Asia/Phnom_Penh
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"

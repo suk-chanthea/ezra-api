@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
 	"github.com/suk-chanthea/ezra/interface/http/handler"
@@ -43,6 +44,15 @@ func loadConfig() *Config {
 }
 
 func main() {
+	// Set timezone for the application
+	loc, err := time.LoadLocation("Asia/Phnom_Penh")
+	if err != nil {
+		log.Printf("⚠️  Warning: Could not load timezone, using default: %v", err)
+	} else {
+		time.Local = loc
+		log.Printf("🌏 Timezone set to: %s", loc.String())
+	}
+
 	// Load configuration
 	config := loadConfig()
 
