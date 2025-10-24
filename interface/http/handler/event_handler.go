@@ -61,6 +61,28 @@ func (h *EventHandler) Create(c *gin.Context) {
 }
 
 func (h *EventHandler) GetAll(c *gin.Context) {
+	// Parse pagination parameters
+	var pagination dto.PaginationRequest
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid pagination parameters"})
+		return
+	}
+
+	// If pagination parameters are provided, use paginated query
+	if pagination.Page > 0 || pagination.PageSize > 0 {
+		events, meta, err := h.eventUseCase.GetAllEventsPaginated(pagination.GetPage(), pagination.GetPageSize())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, dto.PaginatedResponse{
+			Data:       events,
+			Pagination: meta,
+		})
+		return
+	}
+
+	// Otherwise, return all results
 	events, err := h.eventUseCase.GetAllEvents()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})

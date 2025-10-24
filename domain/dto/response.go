@@ -71,3 +71,36 @@ type BookingResponse struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 }
+
+// PaginationMetadata represents pagination information
+type PaginationMetadata struct {
+	CurrentPage  int   `json:"current_page"`
+	PageSize     int   `json:"page_size"`
+	TotalPages   int   `json:"total_pages"`
+	TotalRecords int64 `json:"total_records"`
+	HasNextPage  bool  `json:"has_next_page"`
+	HasPrevPage  bool  `json:"has_prev_page"`
+}
+
+// PaginatedResponse represents a paginated response wrapper
+type PaginatedResponse struct {
+	Data       interface{}         `json:"data"`
+	Pagination *PaginationMetadata `json:"pagination"`
+}
+
+// NewPaginationMetadata creates pagination metadata
+func NewPaginationMetadata(page, pageSize int, totalRecords int64) *PaginationMetadata {
+	totalPages := int((totalRecords + int64(pageSize) - 1) / int64(pageSize))
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	
+	return &PaginationMetadata{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		TotalPages:   totalPages,
+		TotalRecords: totalRecords,
+		HasNextPage:  page < totalPages,
+		HasPrevPage:  page > 1,
+	}
+}

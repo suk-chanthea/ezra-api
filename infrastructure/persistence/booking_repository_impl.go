@@ -55,6 +55,23 @@ func (r *bookingRepositoryImpl) FindAll() ([]*entity.Booking, error) {
 	return r.modelsToEntities(models), nil
 }
 
+func (r *bookingRepositoryImpl) FindAllPaginated(offset, limit int) ([]*entity.Booking, int64, error) {
+	var models []BookingModel
+	var total int64
+	
+	// Get total count
+	if err := r.db.Model(&BookingModel{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	// Get paginated results with preloaded relations
+	if err := r.db.Preload("Event").Preload("Event.Musics").Preload("User").Offset(offset).Limit(limit).Find(&models).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return r.modelsToEntities(models), total, nil
+}
+
 func (r *bookingRepositoryImpl) FindByID(id uint) (*entity.Booking, error) {
 	var model BookingModel
 	if err := r.db.Preload("Event").Preload("Event.Musics").Preload("User").First(&model, id).Error; err != nil {

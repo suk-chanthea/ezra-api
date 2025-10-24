@@ -11,6 +11,7 @@ import (
 type BookingUseCase interface {
 	CreateBooking(req *dto.CreateBookingRequest, userID uint) error
 	GetAllBookings() ([]*dto.BookingResponse, error)
+	GetAllBookingsPaginated(page, pageSize int) ([]*dto.BookingResponse, *dto.PaginationMetadata, error)
 	GetBookingByID(id uint) (*dto.BookingResponse, error)
 	GetBookingsByEventID(eventID uint) ([]*dto.BookingResponse, error)
 	GetBookingsByUserID(userID uint) ([]*dto.BookingResponse, error)
@@ -70,6 +71,17 @@ func (uc *bookingUseCase) GetAllBookings() ([]*dto.BookingResponse, error) {
 	}
 
 	return uc.entitiesToResponses(bookings), nil
+}
+
+func (uc *bookingUseCase) GetAllBookingsPaginated(page, pageSize int) ([]*dto.BookingResponse, *dto.PaginationMetadata, error) {
+	offset := (page - 1) * pageSize
+	bookings, total, err := uc.bookingRepo.FindAllPaginated(offset, pageSize)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	pagination := dto.NewPaginationMetadata(page, pageSize, total)
+	return uc.entitiesToResponses(bookings), pagination, nil
 }
 
 func (uc *bookingUseCase) GetBookingByID(id uint) (*dto.BookingResponse, error) {

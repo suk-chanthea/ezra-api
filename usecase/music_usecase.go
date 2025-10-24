@@ -11,6 +11,7 @@ import (
 type MusicUseCase interface {
 	CreateMusic(title, cover, audio string, userID uint) error
 	GetAllMusics() ([]*dto.MusicResponse, error)
+	GetAllMusicsPaginated(page, pageSize int) ([]*dto.MusicResponse, *dto.PaginationMetadata, error)
 	GetMusicByID(id uint) (*dto.MusicResponse, error)
 	GetMusicsByUserID(userID uint) ([]*dto.MusicResponse, error)
 	UpdateMusic(id uint, title, cover, audio string, userID uint) error
@@ -44,6 +45,17 @@ func (uc *musicUseCase) GetAllMusics() ([]*dto.MusicResponse, error) {
 	}
 	
 	return uc.entitiesToResponses(musics), nil
+}
+
+func (uc *musicUseCase) GetAllMusicsPaginated(page, pageSize int) ([]*dto.MusicResponse, *dto.PaginationMetadata, error) {
+	offset := (page - 1) * pageSize
+	musics, total, err := uc.musicRepo.FindAllPaginated(offset, pageSize)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	pagination := dto.NewPaginationMetadata(page, pageSize, total)
+	return uc.entitiesToResponses(musics), pagination, nil
 }
 
 func (uc *musicUseCase) GetMusicByID(id uint) (*dto.MusicResponse, error) {

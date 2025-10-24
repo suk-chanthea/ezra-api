@@ -55,6 +55,28 @@ func (h *BookingHandler) Create(c *gin.Context) {
 }
 
 func (h *BookingHandler) GetAll(c *gin.Context) {
+	// Parse pagination parameters
+	var pagination dto.PaginationRequest
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid pagination parameters"})
+		return
+	}
+
+	// If pagination parameters are provided, use paginated query
+	if pagination.Page > 0 || pagination.PageSize > 0 {
+		bookings, meta, err := h.bookingUseCase.GetAllBookingsPaginated(pagination.GetPage(), pagination.GetPageSize())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, dto.PaginatedResponse{
+			Data:       bookings,
+			Pagination: meta,
+		})
+		return
+	}
+
+	// Otherwise, return all results
 	bookings, err := h.bookingUseCase.GetAllBookings()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})

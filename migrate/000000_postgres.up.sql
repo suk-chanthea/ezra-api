@@ -158,7 +158,22 @@ CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 
 -- ============================
--- 10. Shared auto-update function
+-- 10. Favorites table (User Favorite Music)
+-- ============================
+CREATE TABLE IF NOT EXISTS favorites (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    music_id INTEGER NOT NULL REFERENCES musics(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, music_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_music_id ON favorites(music_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_created_at ON favorites(created_at);
+
+-- ============================
+-- 11. Shared auto-update function
 -- ============================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -169,7 +184,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================
--- 11. Triggers for auto-updating
+-- 12. Triggers for auto-updating
 -- ============================
 
 -- roles table

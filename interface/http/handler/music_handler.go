@@ -46,6 +46,28 @@ func (h *MusicHandler) Create(c *gin.Context) {
 }
 
 func (h *MusicHandler) GetAll(c *gin.Context) {
+	// Parse pagination parameters
+	var pagination dto.PaginationRequest
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid pagination parameters"})
+		return
+	}
+
+	// If pagination parameters are provided, use paginated query
+	if pagination.Page > 0 || pagination.PageSize > 0 {
+		musics, meta, err := h.musicUseCase.GetAllMusicsPaginated(pagination.GetPage(), pagination.GetPageSize())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, dto.PaginatedResponse{
+			Data:       musics,
+			Pagination: meta,
+		})
+		return
+	}
+
+	// Otherwise, return all results
 	musics, err := h.musicUseCase.GetAllMusics()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})

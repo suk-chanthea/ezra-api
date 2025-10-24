@@ -11,6 +11,7 @@ import (
 type EventUseCase interface {
 	CreateEvent(req *dto.CreateEventRequest, userID uint) error
 	GetAllEvents() ([]*dto.EventResponse, error)
+	GetAllEventsPaginated(page, pageSize int) ([]*dto.EventResponse, *dto.PaginationMetadata, error)
 	GetEventByID(id uint) (*dto.EventResponse, error)
 	GetEventsByUserID(userID uint) ([]*dto.EventResponse, error)
 	UpdateEvent(id uint, req *dto.UpdateEventRequest, userID uint) error
@@ -56,6 +57,17 @@ func (uc *eventUseCase) GetAllEvents() ([]*dto.EventResponse, error) {
 	}
 
 	return uc.entitiesToResponses(events), nil
+}
+
+func (uc *eventUseCase) GetAllEventsPaginated(page, pageSize int) ([]*dto.EventResponse, *dto.PaginationMetadata, error) {
+	offset := (page - 1) * pageSize
+	events, total, err := uc.eventRepo.FindAllPaginated(offset, pageSize)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	pagination := dto.NewPaginationMetadata(page, pageSize, total)
+	return uc.entitiesToResponses(events), pagination, nil
 }
 
 func (uc *eventUseCase) GetEventByID(id uint) (*dto.EventResponse, error) {

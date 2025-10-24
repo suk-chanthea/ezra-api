@@ -50,6 +50,23 @@ func (r *musicRepositoryImpl) FindAll() ([]*entity.Music, error) {
 	return r.modelsToEntities(models), nil
 }
 
+func (r *musicRepositoryImpl) FindAllPaginated(offset, limit int) ([]*entity.Music, int64, error) {
+	var models []MusicModel
+	var total int64
+	
+	// Get total count
+	if err := r.db.Model(&MusicModel{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	// Get paginated results
+	if err := r.db.Offset(offset).Limit(limit).Find(&models).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return r.modelsToEntities(models), total, nil
+}
+
 func (r *musicRepositoryImpl) FindByID(id uint) (*entity.Music, error) {
 	var model MusicModel
 	if err := r.db.First(&model, id).Error; err != nil {

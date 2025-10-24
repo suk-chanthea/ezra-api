@@ -6,6 +6,7 @@ import "github.com/suk-chanthea/ezra/domain/entity"
 type BookingRepository interface {
 	Save(booking *entity.Booking) error
 	FindAll() ([]*entity.Booking, error)
+	FindAllPaginated(offset, limit int) ([]*entity.Booking, int64, error)
 	FindByID(id uint) (*entity.Booking, error)
 	FindByEventID(eventID uint) ([]*entity.Booking, error)
 	FindByUserID(userID uint) ([]*entity.Booking, error)

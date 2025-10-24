@@ -57,3 +57,33 @@ type GoogleLoginRequest struct {
 	Fullname       string `json:"fullname" binding:"required"`
 	ProfilePicture string `json:"profile_picture"`
 }
+
+// PaginationRequest represents pagination parameters
+type PaginationRequest struct {
+	Page     int `form:"page" binding:"omitempty,min=1"`
+	PageSize int `form:"page_size" binding:"omitempty,min=1,max=100"`
+}
+
+// GetPage returns the page number, defaults to 1
+func (p *PaginationRequest) GetPage() int {
+	if p.Page < 1 {
+		return 1
+	}
+	return p.Page
+}
+
+// GetPageSize returns the page size, defaults to 20
+func (p *PaginationRequest) GetPageSize() int {
+	if p.PageSize < 1 {
+		return 20
+	}
+	if p.PageSize > 100 {
+		return 100
+	}
+	return p.PageSize
+}
+
+// GetOffset calculates the offset for database queries
+func (p *PaginationRequest) GetOffset() int {
+	return (p.GetPage() - 1) * p.GetPageSize()
+}

@@ -9,11 +9,12 @@ import (
 )
 
 type Router struct {
-	authHandler    *handler.AuthHandler
-	musicHandler   *handler.MusicHandler
-	eventHandler   *handler.EventHandler
-	bookingHandler *handler.BookingHandler
-	authUseCase    usecase.AuthUseCase
+	authHandler     *handler.AuthHandler
+	musicHandler    *handler.MusicHandler
+	eventHandler    *handler.EventHandler
+	bookingHandler  *handler.BookingHandler
+	favoriteHandler *handler.FavoriteHandler
+	authUseCase     usecase.AuthUseCase
 }
 
 func NewRouter(
@@ -21,14 +22,16 @@ func NewRouter(
 	musicHandler *handler.MusicHandler,
 	eventHandler *handler.EventHandler,
 	bookingHandler *handler.BookingHandler,
+	favoriteHandler *handler.FavoriteHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
-		authHandler:    authHandler,
-		musicHandler:   musicHandler,
-		eventHandler:   eventHandler,
-		bookingHandler: bookingHandler,
-		authUseCase:    authUseCase,
+		authHandler:     authHandler,
+		musicHandler:    musicHandler,
+		eventHandler:    eventHandler,
+		bookingHandler:  bookingHandler,
+		favoriteHandler: favoriteHandler,
+		authUseCase:     authUseCase,
 	}
 }
 
@@ -86,6 +89,16 @@ func (r *Router) Setup() *gin.Engine {
 			bookings.GET("/:id", r.bookingHandler.GetByID)
 			bookings.PUT("/:id", r.bookingHandler.Update)
 			bookings.DELETE("/:id", r.bookingHandler.Delete)
+		}
+
+		// Favorite routes
+		favorites := api.Group("/favorites")
+		{
+			favorites.GET("/", r.favoriteHandler.GetUserFavorites)
+			favorites.POST("/music/:id", r.favoriteHandler.AddFavorite)
+			favorites.DELETE("/music/:id", r.favoriteHandler.RemoveFavorite)
+			favorites.GET("/music/:id/check", r.favoriteHandler.IsFavorite)
+			favorites.GET("/music/:id/count", r.favoriteHandler.GetFavoriteCount)
 		}
 	}
 

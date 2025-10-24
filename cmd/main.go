@@ -68,21 +68,24 @@ func main() {
 	musicRepo := persistence.NewMusicRepository(db)
 	eventRepo := persistence.NewEventRepository(db)
 	bookingRepo := persistence.NewBookingRepository(db)
+	favoriteRepo := persistence.NewFavoriteRepository(db)
 
 	// Initialize use cases (Application layer)
 	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey)
 	musicUseCase := usecase.NewMusicUseCase(musicRepo)
 	eventUseCase := usecase.NewEventUseCase(eventRepo)
 	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
+	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
 
 	// Initialize handlers (Interface layer)
 	authHandler := handler.NewAuthHandler(authUseCase)
 	musicHandler := handler.NewMusicHandler(musicUseCase)
 	eventHandler := handler.NewEventHandler(eventUseCase)
 	bookingHandler := handler.NewBookingHandler(bookingUseCase)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase)
 
 	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, authUseCase)
+	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, authUseCase)
 	engine := r.Setup()
 
 	// Start server

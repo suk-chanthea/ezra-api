@@ -15,6 +15,9 @@ DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
 -- 2. Drop tables in reverse dependency order
 -- ============================
 
+-- Drop favorites (depends on users and musics)
+DROP TABLE IF EXISTS favorites CASCADE;
+
 -- Drop bookings (depends on events and users)
 DROP TABLE IF EXISTS bookings CASCADE;
 
@@ -43,6 +46,11 @@ DROP TABLE IF EXISTS roles CASCADE;
 -- ============================
 -- 3. Drop indexes (optional, mostly handled by DROP TABLE)
 -- ============================
+
+-- Favorites indexes
+DROP INDEX IF EXISTS idx_favorites_user_id;
+DROP INDEX IF EXISTS idx_favorites_music_id;
+DROP INDEX IF EXISTS idx_favorites_created_at;
 
 -- Bookings indexes
 DROP INDEX IF EXISTS idx_bookings_event_id;

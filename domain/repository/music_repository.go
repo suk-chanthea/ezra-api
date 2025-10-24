@@ -6,6 +6,7 @@ import "github.com/suk-chanthea/ezra/domain/entity"
 type MusicRepository interface {
 	Save(music *entity.Music) error
 	FindAll() ([]*entity.Music, error)
+	FindAllPaginated(offset, limit int) ([]*entity.Music, int64, error)
 	FindByID(id uint) (*entity.Music, error)
 	FindByIDs(ids []uint) ([]*entity.Music, error)
 	FindByUserID(userID uint) ([]*entity.Music, error)

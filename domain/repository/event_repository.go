@@ -6,6 +6,7 @@ import "github.com/suk-chanthea/ezra/domain/entity"
 type EventRepository interface {
 	Save(event *entity.Event) error
 	FindAll() ([]*entity.Event, error)
+	FindAllPaginated(offset, limit int) ([]*entity.Event, int64, error)
 	FindByID(id uint) (*entity.Event, error)
 	FindByUserID(userID uint) ([]*entity.Event, error)
 	Update(event *entity.Event) error

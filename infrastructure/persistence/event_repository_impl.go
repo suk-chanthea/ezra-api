@@ -84,6 +84,23 @@ func (r *eventRepositoryImpl) FindAll() ([]*entity.Event, error) {
 	return r.modelsToEntities(models), nil
 }
 
+func (r *eventRepositoryImpl) FindAllPaginated(offset, limit int) ([]*entity.Event, int64, error) {
+	var models []EventModel
+	var total int64
+	
+	// Get total count
+	if err := r.db.Model(&EventModel{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	// Get paginated results with preloaded musics
+	if err := r.db.Preload("Musics").Offset(offset).Limit(limit).Find(&models).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return r.modelsToEntities(models), total, nil
+}
+
 func (r *eventRepositoryImpl) FindByID(id uint) (*entity.Event, error) {
 	var model EventModel
 	if err := r.db.Preload("Musics").First(&model, id).Error; err != nil {
