@@ -18,6 +18,12 @@ DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
 -- Drop favorites (depends on users and musics)
 DROP TABLE IF EXISTS favorites CASCADE;
 
+-- Drop band_musics junction table (depends on bands and musics)
+DROP TABLE IF EXISTS band_musics CASCADE;
+
+-- Drop bands (depends on users)
+DROP TABLE IF EXISTS bands CASCADE;
+
 -- Drop bookings (depends on events and users)
 DROP TABLE IF EXISTS bookings CASCADE;
 
@@ -30,11 +36,17 @@ DROP TABLE IF EXISTS events CASCADE;
 -- Drop music_sheets (depends on musics)
 DROP TABLE IF EXISTS music_sheets CASCADE;
 
+-- Drop music_audio (depends on musics)
+DROP TABLE IF EXISTS music_audio CASCADE;
+
 -- Drop musics (depends on users)
 DROP TABLE IF EXISTS musics CASCADE;
 
 -- Drop tokens (depends on users)
 DROP TABLE IF EXISTS tokens CASCADE;
+
+-- Remove foreign key constraint from users before dropping bands
+ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
 
 -- Drop users (depends on roles)
 DROP TABLE IF EXISTS users CASCADE;
@@ -52,6 +64,15 @@ DROP INDEX IF EXISTS idx_favorites_user_id;
 DROP INDEX IF EXISTS idx_favorites_music_id;
 DROP INDEX IF EXISTS idx_favorites_created_at;
 
+-- Band musics indexes
+DROP INDEX IF EXISTS idx_band_musics_band_id;
+DROP INDEX IF EXISTS idx_band_musics_music_id;
+
+-- Bands indexes
+DROP INDEX IF EXISTS idx_bands_user_id;
+DROP INDEX IF EXISTS idx_bands_name;
+DROP INDEX IF EXISTS idx_bands_is_public;
+
 -- Bookings indexes
 DROP INDEX IF EXISTS idx_bookings_event_id;
 DROP INDEX IF EXISTS idx_bookings_user_id;
@@ -66,11 +87,21 @@ DROP INDEX IF EXISTS idx_events_user_id;
 DROP INDEX IF EXISTS idx_events_start_time;
 
 -- Music sheets indexes
-DROP INDEX IF EXISTS idx_music_sheets_title;
 DROP INDEX IF EXISTS idx_music_sheets_music_id;
+DROP INDEX IF EXISTS idx_music_sheets_type;
+DROP INDEX IF EXISTS idx_music_sheets_lang;
+DROP INDEX IF EXISTS idx_music_sheets_difficulty;
+
+-- Music audio indexes
+DROP INDEX IF EXISTS idx_music_audio_music_id;
+DROP INDEX IF EXISTS idx_music_audio_file_type;
+DROP INDEX IF EXISTS idx_music_audio_is_primary;
 
 -- Musics indexes
 DROP INDEX IF EXISTS idx_musics_user_id;
+DROP INDEX IF EXISTS idx_musics_title;
+DROP INDEX IF EXISTS idx_musics_artist;
+DROP INDEX IF EXISTS idx_musics_genre;
 
 -- Tokens indexes
 DROP INDEX IF EXISTS idx_tokens_user_id;
@@ -81,6 +112,7 @@ DROP INDEX IF EXISTS idx_tokens_expires_at;
 -- Users indexes
 DROP INDEX IF EXISTS idx_users_email;
 DROP INDEX IF EXISTS idx_users_provider_id;
+DROP INDEX IF EXISTS idx_users_band_id;
 
 -- Roles indexes
 DROP INDEX IF EXISTS idx_roles_name;

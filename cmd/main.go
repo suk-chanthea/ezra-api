@@ -73,7 +73,7 @@ func main() {
 	// Initialize use cases (Application layer)
 	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey)
 	musicUseCase := usecase.NewMusicUseCase(musicRepo)
-	eventUseCase := usecase.NewEventUseCase(eventRepo)
+	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo)
 	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
 	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
 

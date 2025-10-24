@@ -20,15 +20,30 @@ type EventUseCase interface {
 
 type eventUseCase struct {
 	eventRepo repository.EventRepository
+	musicRepo repository.MusicRepository
 }
 
-func NewEventUseCase(repo repository.EventRepository) EventUseCase {
+func NewEventUseCase(eventRepo repository.EventRepository, musicRepo repository.MusicRepository) EventUseCase {
 	return &eventUseCase{
-		eventRepo: repo,
+		eventRepo: eventRepo,
+		musicRepo: musicRepo,
 	}
 }
 
 func (uc *eventUseCase) CreateEvent(req *dto.CreateEventRequest, userID uint) error {
+	// Validate music IDs if provided
+	if len(req.MusicIDs) > 0 {
+		musics, err := uc.musicRepo.FindByIDs(req.MusicIDs)
+		
+		if err != nil {
+			return errors.New("failed to validate music IDs")
+		}
+		
+		if len(musics) != len(req.MusicIDs) {
+			return errors.New("one or more music IDs do not exist")
+		}
+	}
+
 	// Create entity
 	event := entity.NewEvent(
 		req.Title,
@@ -160,6 +175,19 @@ func (uc *eventUseCase) UpdateEvent(id uint, req *dto.UpdateEventRequest, userID
 
 	// Update music associations if provided
 	if req.MusicIDs != nil {
+		// Validate music IDs if provided
+		if len(req.MusicIDs) > 0 {
+			musics, err := uc.musicRepo.FindByIDs(req.MusicIDs)
+			
+			if err != nil {
+				return errors.New("failed to validate music IDs")
+			}
+			
+			if len(musics) != len(req.MusicIDs) {
+				return errors.New("one or more music IDs do not exist")
+			}
+		}
+		
 		// Remove old music associations
 		oldMusics, err := uc.eventRepo.GetEventMusics(id)
 		if err == nil && len(oldMusics) > 0 {
