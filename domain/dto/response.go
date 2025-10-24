@@ -104,3 +104,19 @@ func NewPaginationMetadata(page, pageSize int, totalRecords int64) *PaginationMe
 		HasPrevPage:  page > 1,
 	}
 }
+
+// BandResponse represents band output
+type BandResponse struct {
+	ID           uint             `json:"id"`
+	Name         string           `json:"name"`
+	Description  string           `json:"description"`
+	Cover        string           `json:"cover"`
+	IsPublic     bool             `json:"is_public"`
+	UserID       uint             `json:"user_id"`
+	MemberCount  int64            `json:"member_count,omitempty"`
+	MusicCount   int              `json:"music_count,omitempty"`
+	Musics       []*MusicResponse `json:"musics,omitempty"`
+	Members      []*UserResponse  `json:"members,omitempty"`
+	CreatedAt    time.Time        `json:"created_at"`
+	UpdatedAt    time.Time        `json:"updated_at"`
+}

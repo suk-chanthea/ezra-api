@@ -14,6 +14,7 @@ type Router struct {
 	eventHandler    *handler.EventHandler
 	bookingHandler  *handler.BookingHandler
 	favoriteHandler *handler.FavoriteHandler
+	bandHandler     *handler.BandHandler
 	authUseCase     usecase.AuthUseCase
 }
 
@@ -23,6 +24,7 @@ func NewRouter(
 	eventHandler *handler.EventHandler,
 	bookingHandler *handler.BookingHandler,
 	favoriteHandler *handler.FavoriteHandler,
+	bandHandler *handler.BandHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
@@ -31,6 +33,7 @@ func NewRouter(
 		eventHandler:    eventHandler,
 		bookingHandler:  bookingHandler,
 		favoriteHandler: favoriteHandler,
+		bandHandler:     bandHandler,
 		authUseCase:     authUseCase,
 	}
 }
@@ -99,6 +102,27 @@ func (r *Router) Setup() *gin.Engine {
 			favorites.DELETE("/music/:id", r.favoriteHandler.RemoveFavorite)
 			favorites.GET("/music/:id/check", r.favoriteHandler.IsFavorite)
 			favorites.GET("/music/:id/count", r.favoriteHandler.GetFavoriteCount)
+		}
+
+		// Band routes
+		bands := api.Group("/bands")
+		{
+			bands.POST("/", r.bandHandler.Create)
+			bands.GET("/", r.bandHandler.GetAll)
+			bands.GET("/user", r.bandHandler.GetByUser)
+			bands.GET("/public", r.bandHandler.GetPublic)
+			bands.GET("/:id", r.bandHandler.GetByID)
+			bands.PUT("/:id", r.bandHandler.Update)
+			bands.DELETE("/:id", r.bandHandler.Delete)
+			
+			// Band music management
+			bands.GET("/:id/musics", r.bandHandler.GetMusics)
+			bands.POST("/:id/musics", r.bandHandler.AddMusics)
+			bands.DELETE("/:id/musics/:music_id", r.bandHandler.RemoveMusic)
+			bands.PUT("/:id/musics/reorder", r.bandHandler.ReorderMusics)
+			
+			// Band member management
+			bands.GET("/:id/members", r.bandHandler.GetMembers)
 		}
 	}
 

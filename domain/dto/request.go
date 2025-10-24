@@ -16,6 +16,11 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// GoogleLoginRequest represents Google OAuth login input
+type GoogleLoginRequest struct {
+	IDToken string `json:"id_token" binding:"required"`
+}
+
 // CreateEventRequest represents event creation input
 type CreateEventRequest struct {
 	Title     string    `json:"title" binding:"required,min=1,max=200"`
@@ -86,4 +91,36 @@ func (p *PaginationRequest) GetPageSize() int {
 // GetOffset calculates the offset for database queries
 func (p *PaginationRequest) GetOffset() int {
 	return (p.GetPage() - 1) * p.GetPageSize()
+}
+
+// CreateBandRequest represents band creation input
+type CreateBandRequest struct {
+	Name        string `json:"name" binding:"required,min=1,max=255"`
+	Description string `json:"description"`
+	Cover       string `json:"cover"`
+	IsPublic    bool   `json:"is_public"`
+}
+
+// UpdateBandRequest represents band update input
+type UpdateBandRequest struct {
+	Name        string `json:"name" binding:"required,min=1,max=255"`
+	Description string `json:"description"`
+	Cover       string `json:"cover"`
+	IsPublic    bool   `json:"is_public"`
+}
+
+// AddMusicsRequest represents adding music to band input
+type AddMusicsRequest struct {
+	MusicIDs []uint `json:"music_ids" binding:"required,min=1"`
+}
+
+// ReorderMusicsRequest represents reordering music in band
+type ReorderMusicsRequest struct {
+	MusicOrders []MusicOrder `json:"music_orders" binding:"required,min=1"`
+}
+
+// MusicOrder represents a music ID and its display order
+type MusicOrder struct {
+	MusicID      uint `json:"music_id" binding:"required"`
+	DisplayOrder int  `json:"display_order"`
 }

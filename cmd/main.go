@@ -15,9 +15,10 @@ import (
 )
 
 type Config struct {
-	Port        string
-	PostgresURL string
-	SecretKey   string
+	Port            string
+	PostgresURL     string
+	SecretKey       string
+	GoogleClientID  string
 }
 
 func loadConfig() *Config {
@@ -36,10 +37,16 @@ func loadConfig() *Config {
 		secret = "paracletus"
 	}
 
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	if googleClientID == "" {
+		googleClientID = "" // Set via environment variable
+	}
+
 	return &Config{
-		Port:        port,
-		PostgresURL: pg,
-		SecretKey:   secret,
+		Port:           port,
+		PostgresURL:    pg,
+		SecretKey:      secret,
+		GoogleClientID: googleClientID,
 	}
 }
 
@@ -69,13 +76,15 @@ func main() {
 	eventRepo := persistence.NewEventRepository(db)
 	bookingRepo := persistence.NewBookingRepository(db)
 	favoriteRepo := persistence.NewFavoriteRepository(db)
+	bandRepo := persistence.NewBandRepository(db)
 
 	// Initialize use cases (Application layer)
-	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey)
+	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey, config.GoogleClientID)
 	musicUseCase := usecase.NewMusicUseCase(musicRepo)
 	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo)
 	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
 	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
+	bandUseCase := usecase.NewBandUseCase(bandRepo, musicRepo)
 
 	// Initialize handlers (Interface layer)
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -83,9 +92,10 @@ func main() {
 	eventHandler := handler.NewEventHandler(eventUseCase)
 	bookingHandler := handler.NewBookingHandler(bookingUseCase)
 	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase)
+	bandHandler := handler.NewBandHandler(bandUseCase)
 
 	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, authUseCase)
+	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, authUseCase)
 	engine := r.Setup()
 
 	// Start server

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/suk-chanthea/ezra/domain/dto"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"google.golang.org/api/idtoken"
 )
 
 type AuthHandler struct {
@@ -103,25 +105,39 @@ func (h *AuthHandler) DeleteUser(c *gin.Context) {
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	var req dto.GoogleLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			e := validationErrors[0]
-			var message string
-			switch e.Tag() {
-			case "required":
-				message = e.Field() + " is required"
-			case "email":
-				message = e.Field() + " must be a valid email"
-			default:
-				message = "invalid " + e.Field()
-			}
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Errors: message})
-			return
-		}
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
 		return
 	}
 
-	response, err := h.authUseCase.GoogleLogin(req.GoogleID, req.Email, req.Fullname, req.ProfilePicture)
+	// Verify ID token with Google
+	payload, err := idtoken.Validate(context.Background(), req.IDToken, "")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid Google ID token"})
+		return
+	}
+
+	// Extract user info from token payload
+	googleID, ok := payload.Claims["sub"].(string)
+	if !ok || googleID == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid token: missing subject"})
+		return
+	}
+
+	email, ok := payload.Claims["email"].(string)
+	if !ok || email == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid token: missing email"})
+		return
+	}
+
+	fullname, _ := payload.Claims["name"].(string)
+	if fullname == "" {
+		fullname = email // Fallback to email if name not provided
+	}
+
+	profilePicture, _ := payload.Claims["picture"].(string)
+
+	// Call use case to login/register user
+	response, err := h.authUseCase.GoogleLogin(googleID, email, fullname, profilePicture)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return

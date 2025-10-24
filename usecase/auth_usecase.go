@@ -23,14 +23,16 @@ type AuthUseCase interface {
 }
 
 type authUseCase struct {
-	userRepo  repository.UserRepository
-	secretKey []byte
+	userRepo       repository.UserRepository
+	secretKey      []byte
+	googleClientID string
 }
 
-func NewAuthUseCase(repo repository.UserRepository, secret string) AuthUseCase {
+func NewAuthUseCase(repo repository.UserRepository, secret, googleClientID string) AuthUseCase {
 	return &authUseCase{
-		userRepo:  repo,
-		secretKey: []byte(secret),
+		userRepo:       repo,
+		secretKey:      []byte(secret),
+		googleClientID: googleClientID,
 	}
 }
 
