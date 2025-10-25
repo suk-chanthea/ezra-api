@@ -70,10 +70,21 @@ CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at);
 -- 4. Settings table
 -- ============================
 CREATE TABLE IF NOT EXISTS settings (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    language VARCHAR(10) DEFAULT 'en',
+    theme VARCHAR(20) DEFAULT 'light',
+    notify_on_booking BOOLEAN DEFAULT true,
+    notify_on_music BOOLEAN DEFAULT false,
+    notify_on_event BOOLEAN DEFAULT true,
+    enable_push_notifications BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    UNIQUE(user_id),
+    CHECK (theme IN ('light', 'dark', 'auto'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_settings_user_id ON settings(user_id);
 
 -- ============================
 -- 5. Musics table (Core music metadata)
@@ -266,6 +277,18 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================
+-- 14b. Function to create default settings for new users
+-- ============================
+CREATE OR REPLACE FUNCTION create_user_settings()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO settings (user_id, language, theme, notify_on_booking, notify_on_music, notify_on_event, enable_push_notifications)
+    VALUES (NEW.id, 'en', 'light', true, false, true, true);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================
 -- 15. Triggers for auto-updating
 -- ============================
 
@@ -282,6 +305,13 @@ CREATE TRIGGER update_users_updated_at
 BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to create default settings for new users
+DROP TRIGGER IF EXISTS create_settings_for_new_user ON users;
+CREATE TRIGGER create_settings_for_new_user
+AFTER INSERT ON users
+FOR EACH ROW
+EXECUTE FUNCTION create_user_settings();
 
 -- tokens table
 DROP TRIGGER IF EXISTS update_tokens_updated_at ON tokens;
