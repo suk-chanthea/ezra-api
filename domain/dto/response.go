@@ -120,3 +120,17 @@ type BandResponse struct {
 	CreatedAt    time.Time        `json:"created_at"`
 	UpdatedAt    time.Time        `json:"updated_at"`
 }
+
+// SettingResponse represents user settings output
+type SettingResponse struct {
+	ID                     uint      `json:"id"`
+	UserID                 uint      `json:"user_id"`
+	Language               string    `json:"language"`
+	Theme                  string    `json:"theme"`
+	NotifyOnBooking        bool      `json:"notify_on_booking"`
+	NotifyOnMusic          bool      `json:"notify_on_music"`
+	NotifyOnEvent          bool      `json:"notify_on_event"`
+	EnablePushNotifications bool      `json:"enable_push_notifications"`
+	CreatedAt              time.Time `json:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at"`
+}

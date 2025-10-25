@@ -77,6 +77,7 @@ func main() {
 	bookingRepo := persistence.NewBookingRepository(db)
 	favoriteRepo := persistence.NewFavoriteRepository(db)
 	bandRepo := persistence.NewBandRepository(db)
+	settingRepo := persistence.NewSettingRepository(db)
 
 	// Initialize use cases (Application layer)
 	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey, config.GoogleClientID)
@@ -85,6 +86,7 @@ func main() {
 	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
 	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
 	bandUseCase := usecase.NewBandUseCase(bandRepo, musicRepo)
+	settingUseCase := usecase.NewSettingUseCase(settingRepo)
 
 	// Initialize handlers (Interface layer)
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -93,9 +95,10 @@ func main() {
 	bookingHandler := handler.NewBookingHandler(bookingUseCase)
 	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase)
 	bandHandler := handler.NewBandHandler(bandUseCase)
+	settingHandler := handler.NewSettingHandler(settingUseCase)
 
 	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, authUseCase)
+	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, authUseCase)
 	engine := r.Setup()
 
 	// Start server

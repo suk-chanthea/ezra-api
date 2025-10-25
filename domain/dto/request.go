@@ -55,14 +55,6 @@ type UpdateBookingRequest struct {
 	Notes  string `json:"notes"`
 }
 
-// GoogleLoginRequest represents Google OAuth login input
-type GoogleLoginRequest struct {
-	GoogleID       string `json:"google_id" binding:"required"`
-	Email          string `json:"email" binding:"required,email"`
-	Fullname       string `json:"fullname" binding:"required"`
-	ProfilePicture string `json:"profile_picture"`
-}
-
 // PaginationRequest represents pagination parameters
 type PaginationRequest struct {
 	Page     int `form:"page" binding:"omitempty,min=1"`
@@ -123,4 +115,14 @@ type ReorderMusicsRequest struct {
 type MusicOrder struct {
 	MusicID      uint `json:"music_id" binding:"required"`
 	DisplayOrder int  `json:"display_order"`
+}
+
+// UpdateSettingRequest represents settings update input
+type UpdateSettingRequest struct {
+	Language               string `json:"language" binding:"required,oneof=en kh kr cn"`
+	Theme                  string `json:"theme" binding:"required,oneof=light dark auto"`
+	NotifyOnBooking        bool   `json:"notify_on_booking"`
+	NotifyOnMusic          bool   `json:"notify_on_music"`
+	NotifyOnEvent          bool   `json:"notify_on_event"`
+	EnablePushNotifications bool   `json:"enable_push_notifications"`
 }

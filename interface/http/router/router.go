@@ -15,6 +15,7 @@ type Router struct {
 	bookingHandler  *handler.BookingHandler
 	favoriteHandler *handler.FavoriteHandler
 	bandHandler     *handler.BandHandler
+	settingHandler  *handler.SettingHandler
 	authUseCase     usecase.AuthUseCase
 }
 
@@ -25,6 +26,7 @@ func NewRouter(
 	bookingHandler *handler.BookingHandler,
 	favoriteHandler *handler.FavoriteHandler,
 	bandHandler *handler.BandHandler,
+	settingHandler *handler.SettingHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
@@ -34,6 +36,7 @@ func NewRouter(
 		bookingHandler:  bookingHandler,
 		favoriteHandler: favoriteHandler,
 		bandHandler:     bandHandler,
+		settingHandler:  settingHandler,
 		authUseCase:     authUseCase,
 	}
 }
@@ -123,6 +126,14 @@ func (r *Router) Setup() *gin.Engine {
 			
 			// Band member management
 			bands.GET("/:id/members", r.bandHandler.GetMembers)
+		}
+
+		// Setting routes
+		settings := api.Group("/settings")
+		{
+			settings.GET("/", r.settingHandler.GetSettings)
+			settings.PUT("/", r.settingHandler.UpdateSettings)
+			settings.POST("/reset", r.settingHandler.ResetSettings)
 		}
 	}
 
