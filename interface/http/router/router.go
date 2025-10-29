@@ -9,14 +9,16 @@ import (
 )
 
 type Router struct {
-	authHandler     *handler.AuthHandler
-	musicHandler    *handler.MusicHandler
-	eventHandler    *handler.EventHandler
-	bookingHandler  *handler.BookingHandler
-	favoriteHandler *handler.FavoriteHandler
-	bandHandler     *handler.BandHandler
-	settingHandler  *handler.SettingHandler
-	authUseCase     usecase.AuthUseCase
+	authHandler         *handler.AuthHandler
+	musicHandler        *handler.MusicHandler
+	eventHandler        *handler.EventHandler
+	bookingHandler      *handler.BookingHandler
+	favoriteHandler     *handler.FavoriteHandler
+	bandHandler         *handler.BandHandler
+	settingHandler      *handler.SettingHandler
+	notificationHandler *handler.NotificationHandler
+	deviceTokenHandler  *handler.DeviceTokenHandler
+	authUseCase         usecase.AuthUseCase
 }
 
 func NewRouter(
@@ -27,17 +29,21 @@ func NewRouter(
 	favoriteHandler *handler.FavoriteHandler,
 	bandHandler *handler.BandHandler,
 	settingHandler *handler.SettingHandler,
+	notificationHandler *handler.NotificationHandler,
+	deviceTokenHandler *handler.DeviceTokenHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
-		authHandler:     authHandler,
-		musicHandler:    musicHandler,
-		eventHandler:    eventHandler,
-		bookingHandler:  bookingHandler,
-		favoriteHandler: favoriteHandler,
-		bandHandler:     bandHandler,
-		settingHandler:  settingHandler,
-		authUseCase:     authUseCase,
+		authHandler:         authHandler,
+		musicHandler:        musicHandler,
+		eventHandler:        eventHandler,
+		bookingHandler:      bookingHandler,
+		favoriteHandler:     favoriteHandler,
+		bandHandler:         bandHandler,
+		settingHandler:      settingHandler,
+		notificationHandler: notificationHandler,
+		deviceTokenHandler:  deviceTokenHandler,
+		authUseCase:         authUseCase,
 	}
 }
 
@@ -134,6 +140,30 @@ func (r *Router) Setup() *gin.Engine {
 			settings.GET("/", r.settingHandler.GetSettings)
 			settings.PUT("/", r.settingHandler.UpdateSettings)
 			settings.POST("/reset", r.settingHandler.ResetSettings)
+		}
+
+		// Notification routes
+		notifications := api.Group("/notifications")
+		{
+			notifications.POST("/", r.notificationHandler.Create)                                   // Send to specific user
+			notifications.POST("/band/:band_id", r.notificationHandler.CreateBandNotification)     // Send to band/team
+			notifications.POST("/broadcast", r.notificationHandler.CreateBroadcast)                // Send to all users
+			notifications.GET("/", r.notificationHandler.GetAll)
+			notifications.GET("/unread", r.notificationHandler.GetUnread)
+			notifications.GET("/unread/count", r.notificationHandler.GetUnreadCount)
+			notifications.GET("/:id", r.notificationHandler.GetByID)
+			notifications.PUT("/:id/read", r.notificationHandler.MarkAsRead)
+			notifications.PUT("/read-all", r.notificationHandler.MarkAllAsRead)
+			notifications.DELETE("/:id", r.notificationHandler.Delete)
+			notifications.DELETE("/", r.notificationHandler.DeleteAll)
+		}
+
+		// Device Token routes (FCM push notifications)
+		deviceTokens := api.Group("/device-tokens")
+		{
+			deviceTokens.POST("/register", r.deviceTokenHandler.RegisterToken)     // Register FCM token
+			deviceTokens.POST("/unregister", r.deviceTokenHandler.UnregisterToken) // Unregister FCM token
+			deviceTokens.DELETE("/clear", r.deviceTokenHandler.DeleteAllTokens)    // Clear all tokens
 		}
 	}
 

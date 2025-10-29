@@ -9,12 +9,12 @@ import (
 )
 
 type MusicUseCase interface {
-	CreateMusic(title, cover, audio string, userID uint) error
+	CreateMusic(title, cover string, userID uint) error
 	GetAllMusics() ([]*dto.MusicResponse, error)
 	GetAllMusicsPaginated(page, pageSize int) ([]*dto.MusicResponse, *dto.PaginationMetadata, error)
 	GetMusicByID(id uint) (*dto.MusicResponse, error)
 	GetMusicsByUserID(userID uint) ([]*dto.MusicResponse, error)
-	UpdateMusic(id uint, title, cover, audio string, userID uint) error
+	UpdateMusic(id uint, title, cover string, userID uint) error
 	DeleteMusic(id uint, userID uint) error
 }
 
@@ -28,8 +28,8 @@ func NewMusicUseCase(repo repository.MusicRepository) MusicUseCase {
 	}
 }
 
-func (uc *musicUseCase) CreateMusic(title, cover, audio string, userID uint) error {
-	music := entity.NewMusic(title, cover, audio, userID)
+func (uc *musicUseCase) CreateMusic(title, cover string, userID uint) error {
+	music := entity.NewMusic(title, cover, userID)
 	
 	if !music.IsValid() {
 		return errors.New("invalid music data")
@@ -76,7 +76,7 @@ func (uc *musicUseCase) GetMusicsByUserID(userID uint) ([]*dto.MusicResponse, er
 	return uc.entitiesToResponses(musics), nil
 }
 
-func (uc *musicUseCase) UpdateMusic(id uint, title, cover, audio string, userID uint) error {
+func (uc *musicUseCase) UpdateMusic(id uint, title, cover string, userID uint) error {
 	music, err := uc.musicRepo.FindByID(id)
 	if err != nil {
 		return err
@@ -89,7 +89,6 @@ func (uc *musicUseCase) UpdateMusic(id uint, title, cover, audio string, userID 
 	
 	music.Title = title
 	music.Cover = cover
-	music.Audio = audio
 	
 	return uc.musicRepo.Update(music)
 }
@@ -110,13 +109,20 @@ func (uc *musicUseCase) DeleteMusic(id uint, userID uint) error {
 
 func (uc *musicUseCase) entityToResponse(music *entity.Music) *dto.MusicResponse {
 	return &dto.MusicResponse{
-		ID:        music.ID,
-		Title:     music.Title,
-		Cover:     music.Cover,
-		Audio:     music.Audio,
-		UserID:    music.UserID,
-		CreatedAt: music.CreatedAt,
-		UpdatedAt: music.UpdatedAt,
+		ID:          music.ID,
+		Title:       music.Title,
+		Artist:      music.Artist,
+		Album:       music.Album,
+		Genre:       music.Genre,
+		Duration:    music.Duration,
+		BPM:         music.BPM,
+		Key:         music.Key,
+		Cover:       music.Cover,
+		Lyrics:      music.Lyrics,
+		Description: music.Description,
+		UserID:      music.UserID,
+		CreatedAt:   music.CreatedAt,
+		UpdatedAt:   music.UpdatedAt,
 	}
 }
 

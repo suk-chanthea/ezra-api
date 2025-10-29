@@ -10,13 +10,20 @@ type AuthResponse struct {
 
 // MusicResponse represents music output
 type MusicResponse struct {
-	ID        uint      `json:"id"`
-	Title     string    `json:"title"`
-	Cover     string    `json:"cover"`
-	Audio     string    `json:"audio"`
-	UserID    uint      `json:"user_id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          uint      `json:"id"`
+	Title       string    `json:"title"`
+	Artist      string    `json:"artist,omitempty"`
+	Album       string    `json:"album,omitempty"`
+	Genre       string    `json:"genre,omitempty"`
+	Duration    int       `json:"duration,omitempty"`    // in seconds
+	BPM         int       `json:"bpm,omitempty"`         // beats per minute
+	Key         string    `json:"key,omitempty"`         // musical key
+	Cover       string    `json:"cover,omitempty"`
+	Lyrics      string    `json:"lyrics,omitempty"`
+	Description string    `json:"description,omitempty"`
+	UserID      uint      `json:"user_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // EventResponse represents event output
@@ -133,4 +140,22 @@ type SettingResponse struct {
 	EnablePushNotifications bool      `json:"enable_push_notifications"`
 	CreatedAt              time.Time `json:"created_at"`
 	UpdatedAt              time.Time `json:"updated_at"`
+}
+
+// NotificationResponse represents notification output
+type NotificationResponse struct {
+	ID            uint       `json:"id"`
+	UserID        *uint      `json:"user_id,omitempty"`
+	SenderID      *uint      `json:"sender_id,omitempty"`
+	BandID        *uint      `json:"band_id,omitempty"`
+	RecipientType string     `json:"recipient_type"` // user, band, all
+	Title         string     `json:"title"`
+	Message       string     `json:"message"`
+	Type          string     `json:"type"`
+	RelatedType   string     `json:"related_type,omitempty"`
+	RelatedID     *uint      `json:"related_id,omitempty"`
+	IsRead        bool       `json:"is_read"`
+	ReadAt        *time.Time `json:"read_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }

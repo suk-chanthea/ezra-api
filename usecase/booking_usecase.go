@@ -174,19 +174,26 @@ func (uc *bookingUseCase) entityToResponse(booking *entity.Booking) *dto.Booking
 
 		// Convert musics if available
 		if len(booking.Event.Musics) > 0 {
-			response.Event.Musics = make([]*dto.MusicResponse, len(booking.Event.Musics))
-			for i, music := range booking.Event.Musics {
-				response.Event.Musics[i] = &dto.MusicResponse{
-					ID:        music.ID,
-					Title:     music.Title,
-					Cover:     music.Cover,
-					Audio:     music.Audio,
-					UserID:    music.UserID,
-					CreatedAt: music.CreatedAt,
-					UpdatedAt: music.UpdatedAt,
-				}
+		response.Event.Musics = make([]*dto.MusicResponse, len(booking.Event.Musics))
+		for i, music := range booking.Event.Musics {
+			response.Event.Musics[i] = &dto.MusicResponse{
+				ID:          music.ID,
+				Title:       music.Title,
+				Artist:      music.Artist,
+				Album:       music.Album,
+				Genre:       music.Genre,
+				Duration:    music.Duration,
+				BPM:         music.BPM,
+				Key:         music.Key,
+				Cover:       music.Cover,
+				Lyrics:      music.Lyrics,
+				Description: music.Description,
+				UserID:      music.UserID,
+				CreatedAt:   music.CreatedAt,
+				UpdatedAt:   music.UpdatedAt,
 			}
 		}
+	}
 	}
 
 	// Convert user if available

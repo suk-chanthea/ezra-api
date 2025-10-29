@@ -10,13 +10,20 @@ import (
 
 // MusicModel is the GORM model for database
 type MusicModel struct {
-	ID        uint      `gorm:"primaryKey"`
-	Title     string    `gorm:"size:255;not null"`
-	Cover     string    `gorm:"size:255;not null"`
-	Audio     string    `gorm:"size:255"`
-	UserID    uint      `gorm:"not null"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	ID          uint      `gorm:"primaryKey"`
+	Title       string    `gorm:"size:255;not null"`
+	Artist      string    `gorm:"size:255"`
+	Album       string    `gorm:"size:255"`
+	Genre       string    `gorm:"size:100"`
+	Duration    int       `gorm:"type:integer"` // in seconds
+	BPM         int       `gorm:"type:integer"` // beats per minute
+	Key         string    `gorm:"size:10"`      // musical key
+	Cover       string    `gorm:"size:255"`
+	Lyrics      string    `gorm:"type:text"`
+	Description string    `gorm:"type:text"`
+	UserID      uint      `gorm:"not null"`
+	CreatedAt   time.Time `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
 }
 
 func (MusicModel) TableName() string {
@@ -102,25 +109,39 @@ func (r *musicRepositoryImpl) Delete(id uint) error {
 
 func (r *musicRepositoryImpl) entityToModel(music *entity.Music) *MusicModel {
 	return &MusicModel{
-		ID:        music.ID,
-		Title:     music.Title,
-		Cover:     music.Cover,
-		Audio:     music.Audio,
-		UserID:    music.UserID,
-		CreatedAt: music.CreatedAt,
-		UpdatedAt: music.UpdatedAt,
+		ID:          music.ID,
+		Title:       music.Title,
+		Artist:      music.Artist,
+		Album:       music.Album,
+		Genre:       music.Genre,
+		Duration:    music.Duration,
+		BPM:         music.BPM,
+		Key:         music.Key,
+		Cover:       music.Cover,
+		Lyrics:      music.Lyrics,
+		Description: music.Description,
+		UserID:      music.UserID,
+		CreatedAt:   music.CreatedAt,
+		UpdatedAt:   music.UpdatedAt,
 	}
 }
 
 func (r *musicRepositoryImpl) modelToEntity(model *MusicModel) *entity.Music {
 	return &entity.Music{
-		ID:        model.ID,
-		Title:     model.Title,
-		Cover:     model.Cover,
-		Audio:     model.Audio,
-		UserID:    model.UserID,
-		CreatedAt: model.CreatedAt,
-		UpdatedAt: model.UpdatedAt,
+		ID:          model.ID,
+		Title:       model.Title,
+		Artist:      model.Artist,
+		Album:       model.Album,
+		Genre:       model.Genre,
+		Duration:    model.Duration,
+		BPM:         model.BPM,
+		Key:         model.Key,
+		Cover:       model.Cover,
+		Lyrics:      model.Lyrics,
+		Description: model.Description,
+		UserID:      model.UserID,
+		CreatedAt:   model.CreatedAt,
+		UpdatedAt:   model.UpdatedAt,
 	}
 }
 

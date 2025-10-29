@@ -1,7 +1,9 @@
 package usecase
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
 	"github.com/suk-chanthea/ezra/domain/dto"
 	"github.com/suk-chanthea/ezra/domain/entity"
@@ -19,14 +21,16 @@ type EventUseCase interface {
 }
 
 type eventUseCase struct {
-	eventRepo repository.EventRepository
-	musicRepo repository.MusicRepository
+	eventRepo        repository.EventRepository
+	musicRepo        repository.MusicRepository
+	notificationRepo repository.NotificationRepository
 }
 
-func NewEventUseCase(eventRepo repository.EventRepository, musicRepo repository.MusicRepository) EventUseCase {
+func NewEventUseCase(eventRepo repository.EventRepository, musicRepo repository.MusicRepository, notificationRepo repository.NotificationRepository) EventUseCase {
 	return &eventUseCase{
-		eventRepo: eventRepo,
-		musicRepo: musicRepo,
+		eventRepo:        eventRepo,
+		musicRepo:        musicRepo,
+		notificationRepo: notificationRepo,
 	}
 }
 
@@ -61,8 +65,30 @@ func (uc *eventUseCase) CreateEvent(req *dto.CreateEventRequest, userID uint) er
 		return errors.New("invalid event data")
 	}
 
-	// Save
-	return uc.eventRepo.Save(event)
+	// Save event
+	if err := uc.eventRepo.Save(event); err != nil {
+		return err
+	}
+
+	// Create broadcast notification for all users about the new event
+	notification := entity.NewBroadcastNotification(
+		fmt.Sprintf("New Event: %s", event.Title),
+		fmt.Sprintf("%s at %s on %s", event.Title, event.Location, event.StartTime.Format("Jan 02, 2006 3:04 PM")),
+		"event",
+	)
+	notification.SenderID = &userID
+	notification.RelatedType = "event"
+	notification.RelatedID = &event.ID
+	
+	// Send notification (don't fail event creation if notification fails)
+	// Note: FCM push notifications are now handled by the notification system
+	if err := uc.notificationRepo.Create(context.Background(), notification); err != nil {
+		// Log the error but don't return it
+		// In production, you might want to use a proper logger here
+		// log.Printf("Failed to send event notification: %v", err)
+	}
+
+	return nil
 }
 
 func (uc *eventUseCase) GetAllEvents() ([]*dto.EventResponse, error) {
@@ -122,13 +148,20 @@ func (uc *eventUseCase) entityToResponse(event *entity.Event) *dto.EventResponse
 		response.Musics = make([]*dto.MusicResponse, len(event.Musics))
 		for i, music := range event.Musics {
 			response.Musics[i] = &dto.MusicResponse{
-				ID:        music.ID,
-				Title:     music.Title,
-				Cover:     music.Cover,
-				Audio:     music.Audio,
-				UserID:    music.UserID,
-				CreatedAt: music.CreatedAt,
-				UpdatedAt: music.UpdatedAt,
+				ID:          music.ID,
+				Title:       music.Title,
+				Artist:      music.Artist,
+				Album:       music.Album,
+				Genre:       music.Genre,
+				Duration:    music.Duration,
+				BPM:         music.BPM,
+				Key:         music.Key,
+				Cover:       music.Cover,
+				Lyrics:      music.Lyrics,
+				Description: music.Description,
+				UserID:      music.UserID,
+				CreatedAt:   music.CreatedAt,
+				UpdatedAt:   music.UpdatedAt,
 			}
 		}
 	}

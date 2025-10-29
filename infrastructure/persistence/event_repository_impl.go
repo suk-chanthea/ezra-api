@@ -164,13 +164,20 @@ func (r *eventRepositoryImpl) GetEventMusics(eventID uint) ([]*entity.Music, err
 	musics := make([]*entity.Music, len(musicModels))
 	for i, model := range musicModels {
 		musics[i] = &entity.Music{
-			ID:        model.ID,
-			Title:     model.Title,
-			Cover:     model.Cover,
-			Audio:     model.Audio,
-			UserID:    model.UserID,
-			CreatedAt: model.CreatedAt,
-			UpdatedAt: model.UpdatedAt,
+			ID:          model.ID,
+			Title:       model.Title,
+			Artist:      model.Artist,
+			Album:       model.Album,
+			Genre:       model.Genre,
+			Duration:    model.Duration,
+			BPM:         model.BPM,
+			Key:         model.Key,
+			Cover:       model.Cover,
+			Lyrics:      model.Lyrics,
+			Description: model.Description,
+			UserID:      model.UserID,
+			CreatedAt:   model.CreatedAt,
+			UpdatedAt:   model.UpdatedAt,
 		}
 	}
 	return musics, nil
@@ -210,13 +217,20 @@ func (r *eventRepositoryImpl) modelToEntity(model *EventModel) *entity.Event {
 		event.Musics = make([]*entity.Music, len(model.Musics))
 		for i, musicModel := range model.Musics {
 			event.Musics[i] = &entity.Music{
-				ID:        musicModel.ID,
-				Title:     musicModel.Title,
-				Cover:     musicModel.Cover,
-				Audio:     musicModel.Audio,
-				UserID:    musicModel.UserID,
-				CreatedAt: musicModel.CreatedAt,
-				UpdatedAt: musicModel.UpdatedAt,
+				ID:          musicModel.ID,
+				Title:       musicModel.Title,
+				Artist:      musicModel.Artist,
+				Album:       musicModel.Album,
+				Genre:       musicModel.Genre,
+				Duration:    musicModel.Duration,
+				BPM:         musicModel.BPM,
+				Key:         musicModel.Key,
+				Cover:       musicModel.Cover,
+				Lyrics:      musicModel.Lyrics,
+				Description: musicModel.Description,
+				UserID:      musicModel.UserID,
+				CreatedAt:   musicModel.CreatedAt,
+				UpdatedAt:   musicModel.UpdatedAt,
 			}
 		}
 	}

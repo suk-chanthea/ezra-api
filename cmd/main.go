@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/suk-chanthea/ezra/infrastructure/firebase"
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
 	"github.com/suk-chanthea/ezra/interface/http/handler"
 	"github.com/suk-chanthea/ezra/interface/http/router"
@@ -15,10 +16,11 @@ import (
 )
 
 type Config struct {
-	Port            string
-	PostgresURL     string
-	SecretKey       string
-	GoogleClientID  string
+	Port                   string
+	PostgresURL            string
+	SecretKey              string
+	GoogleClientID         string
+	FirebaseCredentialPath string
 }
 
 func loadConfig() *Config {
@@ -42,11 +44,15 @@ func loadConfig() *Config {
 		googleClientID = "" // Set via environment variable
 	}
 
+	firebaseCredPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
+	// Optional: If not set, FCM will be disabled (dummy service)
+
 	return &Config{
-		Port:           port,
-		PostgresURL:    pg,
-		SecretKey:      secret,
-		GoogleClientID: googleClientID,
+		Port:                   port,
+		PostgresURL:            pg,
+		SecretKey:              secret,
+		GoogleClientID:         googleClientID,
+		FirebaseCredentialPath: firebaseCredPath,
 	}
 }
 
@@ -78,15 +84,24 @@ func main() {
 	favoriteRepo := persistence.NewFavoriteRepository(db)
 	bandRepo := persistence.NewBandRepository(db)
 	settingRepo := persistence.NewSettingRepository(db)
+	notificationRepo := persistence.NewNotificationRepository(db)
+	deviceTokenRepo := persistence.NewDeviceTokenRepository(db)
+
+	// Initialize Firebase Cloud Messaging service
+	fcmService, err := firebase.NewFCMService(config.FirebaseCredentialPath, deviceTokenRepo)
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize FCM service: %v", err)
+	}
 
 	// Initialize use cases (Application layer)
 	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey, config.GoogleClientID)
 	musicUseCase := usecase.NewMusicUseCase(musicRepo)
-	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo)
+	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo, notificationRepo)
 	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
 	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
 	bandUseCase := usecase.NewBandUseCase(bandRepo, musicRepo)
 	settingUseCase := usecase.NewSettingUseCase(settingRepo)
+	notificationUseCase := usecase.NewNotificationUseCase(notificationRepo, fcmService)
 
 	// Initialize handlers (Interface layer)
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -96,9 +111,11 @@ func main() {
 	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase)
 	bandHandler := handler.NewBandHandler(bandUseCase)
 	settingHandler := handler.NewSettingHandler(settingUseCase)
+	notificationHandler := handler.NewNotificationHandler(notificationUseCase)
+	deviceTokenHandler := handler.NewDeviceTokenHandler(deviceTokenRepo)
 
 	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, authUseCase)
+	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, notificationHandler, deviceTokenHandler, authUseCase)
 	engine := r.Setup()
 
 	// Start server

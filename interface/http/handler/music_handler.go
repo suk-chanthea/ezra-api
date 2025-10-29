@@ -19,9 +19,16 @@ func NewMusicHandler(uc usecase.MusicUseCase) *MusicHandler {
 }
 
 type CreateMusicRequest struct {
-	Title string `json:"title" binding:"required,min=1,max=255"`
-	Cover string `json:"cover" binding:"required,min=1,max=255"`
-	Audio string `json:"audio" binding:"omitempty,max=255"`
+	Title       string `json:"title" binding:"required,min=1,max=255"`
+	Artist      string `json:"artist" binding:"omitempty,max=255"`
+	Album       string `json:"album" binding:"omitempty,max=255"`
+	Genre       string `json:"genre" binding:"omitempty,max=100"`
+	Duration    int    `json:"duration" binding:"omitempty,min=0"`
+	BPM         int    `json:"bpm" binding:"omitempty,min=0"`
+	Key         string `json:"key" binding:"omitempty,max=10"`
+	Cover       string `json:"cover" binding:"omitempty,max=255"`
+	Lyrics      string `json:"lyrics" binding:"omitempty"`
+	Description string `json:"description" binding:"omitempty"`
 }
 
 func (h *MusicHandler) Create(c *gin.Context) {
@@ -37,7 +44,7 @@ func (h *MusicHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.musicUseCase.CreateMusic(req.Title, req.Cover, req.Audio, userID.(uint)); err != nil {
+	if err := h.musicUseCase.CreateMusic(req.Title, req.Cover, userID.(uint)); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
@@ -128,7 +135,7 @@ func (h *MusicHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.musicUseCase.UpdateMusic(uint(id), req.Title, req.Cover, req.Audio, userID.(uint)); err != nil {
+	if err := h.musicUseCase.UpdateMusic(uint(id), req.Title, req.Cover, userID.(uint)); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}

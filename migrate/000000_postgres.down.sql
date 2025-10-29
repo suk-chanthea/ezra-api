@@ -2,18 +2,39 @@
 -- 1. Drop triggers
 -- ============================
 
+DROP TRIGGER IF EXISTS update_device_tokens_updated_at ON device_tokens;
+DROP TRIGGER IF EXISTS update_notifications_updated_at ON notifications;
 DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
 DROP TRIGGER IF EXISTS update_events_updated_at ON events;
 DROP TRIGGER IF EXISTS update_music_sheets_updated_at ON music_sheets;
+DROP TRIGGER IF EXISTS update_music_audio_updated_at ON music_audio;
 DROP TRIGGER IF EXISTS update_musics_updated_at ON musics;
 DROP TRIGGER IF EXISTS update_settings_updated_at ON settings;
 DROP TRIGGER IF EXISTS update_tokens_updated_at ON tokens;
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS create_settings_for_new_user ON users;
 DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
+DROP TRIGGER IF EXISTS update_bands_updated_at ON bands;
 
 -- ============================
--- 2. Drop tables in reverse dependency order
+-- 2. Drop foreign key from users to bands
 -- ============================
+
+-- Must drop the constraint before dropping bands table
+ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
+
+-- Drop the band_id column
+ALTER TABLE users DROP COLUMN IF EXISTS band_id;
+
+-- ============================
+-- 3. Drop tables in reverse dependency order
+-- ============================
+
+-- Drop device tokens (depends on users)
+DROP TABLE IF EXISTS device_tokens CASCADE;
+
+-- Drop notifications (depends on users)
+DROP TABLE IF EXISTS notifications CASCADE;
 
 -- Drop favorites (depends on users and musics)
 DROP TABLE IF EXISTS favorites CASCADE;
@@ -45,19 +66,27 @@ DROP TABLE IF EXISTS musics CASCADE;
 -- Drop tokens (depends on users)
 DROP TABLE IF EXISTS tokens CASCADE;
 
--- Remove foreign key constraint from users before dropping bands
-ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
+-- Drop settings (depends on users)
+DROP TABLE IF EXISTS settings CASCADE;
 
 -- Drop users (depends on roles)
 DROP TABLE IF EXISTS users CASCADE;
 
 -- Drop base tables with no dependencies
-DROP TABLE IF EXISTS settings CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 
 -- ============================
--- 3. Drop indexes (optional, mostly handled by DROP TABLE)
+-- 4. Drop indexes (optional, mostly handled by DROP TABLE)
 -- ============================
+
+-- Notifications indexes
+DROP INDEX IF EXISTS idx_notifications_user_id;
+DROP INDEX IF EXISTS idx_notifications_band_id;
+DROP INDEX IF EXISTS idx_notifications_sender_id;
+DROP INDEX IF EXISTS idx_notifications_recipient_type;
+DROP INDEX IF EXISTS idx_notifications_is_read;
+DROP INDEX IF EXISTS idx_notifications_created_at;
+DROP INDEX IF EXISTS idx_notifications_type;
 
 -- Favorites indexes
 DROP INDEX IF EXISTS idx_favorites_user_id;
@@ -109,6 +138,9 @@ DROP INDEX IF EXISTS idx_tokens_token;
 DROP INDEX IF EXISTS idx_tokens_is_active;
 DROP INDEX IF EXISTS idx_tokens_expires_at;
 
+-- Settings indexes
+DROP INDEX IF EXISTS idx_settings_user_id;
+
 -- Users indexes
 DROP INDEX IF EXISTS idx_users_email;
 DROP INDEX IF EXISTS idx_users_provider_id;
@@ -118,7 +150,8 @@ DROP INDEX IF EXISTS idx_users_band_id;
 DROP INDEX IF EXISTS idx_roles_name;
 
 -- ============================
--- 4. Drop shared function
+-- 5. Drop shared functions
 -- ============================
 
+DROP FUNCTION IF EXISTS create_user_settings();
 DROP FUNCTION IF EXISTS update_updated_at_column();

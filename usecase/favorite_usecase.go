@@ -97,13 +97,20 @@ func (uc *favoriteUseCase) GetFavoriteCount(ctx context.Context, musicID uint) (
 
 func (uc *favoriteUseCase) entityToResponse(music *entity.Music) *dto.MusicResponse {
 	return &dto.MusicResponse{
-		ID:        music.ID,
-		Title:     music.Title,
-		Cover:     music.Cover,
-		Audio:     music.Audio,
-		UserID:    music.UserID,
-		CreatedAt: music.CreatedAt,
-		UpdatedAt: music.UpdatedAt,
+		ID:          music.ID,
+		Title:       music.Title,
+		Artist:      music.Artist,
+		Album:       music.Album,
+		Genre:       music.Genre,
+		Duration:    music.Duration,
+		BPM:         music.BPM,
+		Key:         music.Key,
+		Cover:       music.Cover,
+		Lyrics:      music.Lyrics,
+		Description: music.Description,
+		UserID:      music.UserID,
+		CreatedAt:   music.CreatedAt,
+		UpdatedAt:   music.UpdatedAt,
 	}
 }
 

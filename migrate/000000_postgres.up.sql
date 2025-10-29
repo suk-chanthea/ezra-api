@@ -21,7 +21,7 @@ INSERT INTO roles (name, description, permissions) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================
--- 2. Users table (with role_id FK and OAuth support)
+-- 2. Users table (WITHOUT band_id initially)
 -- ============================
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -34,14 +34,12 @@ CREATE TABLE IF NOT EXISTS users (
     token VARCHAR(255),
     provider VARCHAR(50) DEFAULT 'local',
     provider_id VARCHAR(255),
-    band_id INTEGER DEFAULT NULL,  -- User's affiliated band/organization
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_provider_id ON users(provider, provider_id);
-CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
 
 -- ============================
 -- 3. Tokens table (for multi-device/session support)
@@ -230,10 +228,18 @@ CREATE INDEX IF NOT EXISTS idx_bands_user_id ON bands(user_id);
 CREATE INDEX IF NOT EXISTS idx_bands_name ON bands(name);
 CREATE INDEX IF NOT EXISTS idx_bands_is_public ON bands(is_public);
 
--- Add foreign key constraint to users.band_id after bands table is created
+-- ============================
+-- 11b. NOW add band_id column to users table
+-- ============================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS band_id INTEGER;
+
+-- Add foreign key constraint
 ALTER TABLE users
 ADD CONSTRAINT fk_users_band_id 
 FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE SET NULL;
+
+-- Add index
+CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
 
 -- ============================
 -- 12. Band_Musics Junction Table (Many-to-Many)
@@ -368,3 +374,76 @@ CREATE TRIGGER update_bands_updated_at
 BEFORE UPDATE ON bands
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================
+-- 16. Notifications table
+-- ============================
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,  -- NULL for broadcast
+    sender_id INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- Who sent it
+    band_id INTEGER REFERENCES bands(id) ON DELETE CASCADE,  -- For team notifications
+    recipient_type VARCHAR(20) NOT NULL DEFAULT 'user',  -- 'user', 'band', 'all'
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'info',
+    related_type VARCHAR(50),  -- 'music', 'event', 'booking', 'band'
+    related_id INTEGER,
+    is_read BOOLEAN DEFAULT false,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    CHECK (type IN ('info', 'success', 'warning', 'error', 'booking', 'music', 'event')),
+    CHECK (recipient_type IN ('user', 'band', 'all')),
+    CHECK (
+        (recipient_type = 'user' AND user_id IS NOT NULL AND band_id IS NULL) OR
+        (recipient_type = 'band' AND band_id IS NOT NULL AND user_id IS NULL) OR
+        (recipient_type = 'all' AND user_id IS NULL AND band_id IS NULL)
+    )
+);
+
+-- Device tokens table for FCM (Firebase Cloud Messaging)
+-- Stores device tokens for push notifications to mobile and web
+CREATE TABLE IF NOT EXISTS device_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    platform VARCHAR(20) NOT NULL,  -- 'ios', 'android', 'web'
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    CONSTRAINT unique_user_token UNIQUE(user_id, token)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_band_id ON notifications(band_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_sender_id ON notifications(sender_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_type ON notifications(recipient_type);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+
+CREATE INDEX IF NOT EXISTS idx_device_tokens_user_id ON device_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_device_tokens_is_active ON device_tokens(is_active);
+CREATE INDEX IF NOT EXISTS idx_device_tokens_token ON device_tokens(token);
+
+-- notifications table trigger
+DROP TRIGGER IF EXISTS update_notifications_updated_at ON notifications;
+CREATE TRIGGER update_notifications_updated_at
+BEFORE UPDATE ON notifications
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_device_tokens_updated_at ON device_tokens;
+CREATE TRIGGER update_device_tokens_updated_at
+BEFORE UPDATE ON device_tokens
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================
+-- NOTES FOR DOWN MIGRATION
+-- ============================
+-- The down migration should:
+-- 1. First drop the constraint: ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
+-- 2. Then drop the column: ALTER TABLE users DROP COLUMN IF EXISTS band_id;
+-- 3. Continue with normal table drops

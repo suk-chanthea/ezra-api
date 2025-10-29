@@ -62,13 +62,20 @@ func (r *favoriteRepositoryImpl) GetByUserID(ctx context.Context, userID uint) (
 	entities := make([]*entity.Music, len(musics))
 	for i, model := range musics {
 		entities[i] = &entity.Music{
-			ID:        model.ID,
-			Title:     model.Title,
-			Cover:     model.Cover,
-			Audio:     model.Audio,
-			UserID:    model.UserID,
-			CreatedAt: model.CreatedAt,
-			UpdatedAt: model.UpdatedAt,
+			ID:          model.ID,
+			Title:       model.Title,
+			Artist:      model.Artist,
+			Album:       model.Album,
+			Genre:       model.Genre,
+			Duration:    model.Duration,
+			BPM:         model.BPM,
+			Key:         model.Key,
+			Cover:       model.Cover,
+			Lyrics:      model.Lyrics,
+			Description: model.Description,
+			UserID:      model.UserID,
+			CreatedAt:   model.CreatedAt,
+			UpdatedAt:   model.UpdatedAt,
 		}
 	}
 	return entities, nil
@@ -106,13 +113,20 @@ func (r *favoriteRepositoryImpl) GetByUserIDPaginated(ctx context.Context, userI
 	entities := make([]*entity.Music, len(musics))
 	for i, model := range musics {
 		entities[i] = &entity.Music{
-			ID:        model.ID,
-			Title:     model.Title,
-			Cover:     model.Cover,
-			Audio:     model.Audio,
-			UserID:    model.UserID,
-			CreatedAt: model.CreatedAt,
-			UpdatedAt: model.UpdatedAt,
+			ID:          model.ID,
+			Title:       model.Title,
+			Artist:      model.Artist,
+			Album:       model.Album,
+			Genre:       model.Genre,
+			Duration:    model.Duration,
+			BPM:         model.BPM,
+			Key:         model.Key,
+			Cover:       model.Cover,
+			Lyrics:      model.Lyrics,
+			Description: model.Description,
+			UserID:      model.UserID,
+			CreatedAt:   model.CreatedAt,
+			UpdatedAt:   model.UpdatedAt,
 		}
 	}
 	return entities, total, nil

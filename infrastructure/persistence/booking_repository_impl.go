@@ -159,13 +159,20 @@ func (r *bookingRepositoryImpl) modelToEntity(model *BookingModel) *entity.Booki
 			booking.Event.Musics = make([]*entity.Music, len(model.Event.Musics))
 			for i, musicModel := range model.Event.Musics {
 				booking.Event.Musics[i] = &entity.Music{
-					ID:        musicModel.ID,
-					Title:     musicModel.Title,
-					Cover:     musicModel.Cover,
-					Audio:     musicModel.Audio,
-					UserID:    musicModel.UserID,
-					CreatedAt: musicModel.CreatedAt,
-					UpdatedAt: musicModel.UpdatedAt,
+					ID:          musicModel.ID,
+					Title:       musicModel.Title,
+					Artist:      musicModel.Artist,
+					Album:       musicModel.Album,
+					Genre:       musicModel.Genre,
+					Duration:    musicModel.Duration,
+					BPM:         musicModel.BPM,
+					Key:         musicModel.Key,
+					Cover:       musicModel.Cover,
+					Lyrics:      musicModel.Lyrics,
+					Description: musicModel.Description,
+					UserID:      musicModel.UserID,
+					CreatedAt:   musicModel.CreatedAt,
+					UpdatedAt:   musicModel.UpdatedAt,
 				}
 			}
 		}

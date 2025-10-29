@@ -60,11 +60,20 @@ func (r *settingRepositoryImpl) FindByUserID(userID uint) (*entity.Setting, erro
 
 func (r *settingRepositoryImpl) Update(setting *entity.Setting) error {
 	model := r.entityToModel(setting)
-	if err := r.db.Model(&SettingModel{}).Where("user_id = ?", setting.UserID).Updates(model).Error; err != nil {
+	// Use Select to explicitly update all fields including zero values (like false)
+	if err := r.db.Model(&SettingModel{}).
+		Where("user_id = ?", setting.UserID).
+		Select("language", "theme", "notify_on_booking", "notify_on_music", "notify_on_event", "enable_push_notifications").
+		Updates(model).Error; err != nil {
 		return err
 	}
 	// Retrieve the updated record to get the new timestamp
-	return r.db.Where("user_id = ?", setting.UserID).First(&model).Error
+	var updated SettingModel
+	if err := r.db.Where("user_id = ?", setting.UserID).First(&updated).Error; err != nil {
+		return err
+	}
+	setting.UpdatedAt = updated.UpdatedAt
+	return nil
 }
 
 func (r *settingRepositoryImpl) Delete(userID uint) error {

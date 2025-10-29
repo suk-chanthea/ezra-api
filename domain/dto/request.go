@@ -126,3 +126,14 @@ type UpdateSettingRequest struct {
 	NotifyOnEvent          bool   `json:"notify_on_event"`
 	EnablePushNotifications bool   `json:"enable_push_notifications"`
 }
+
+// CreateNotificationRequest represents notification creation input
+type CreateNotificationRequest struct {
+	UserID      *uint  `json:"user_id"`      // For single user (required if recipient_type=user)
+	BandID      *uint  `json:"band_id"`      // For band/team (required if recipient_type=band)
+	Title       string `json:"title" binding:"required,min=1,max=255"`
+	Message     string `json:"message" binding:"required,min=1"`
+	Type        string `json:"type" binding:"required,oneof=info success warning error booking music event"`
+	RelatedType string `json:"related_type" binding:"omitempty,oneof=music event booking band"`
+	RelatedID   *uint  `json:"related_id"`
+}

@@ -46,3 +46,18 @@ main
 *.dll
 *.so
 *.dylib
+*.test
+*.out
+
+# Firebase credentials (never commit!)
+firebase-adminsdk.json
+*-firebase-adminsdk-*.json
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Test coverage
+coverage.txt
+coverage.out
+*.coverprofile
