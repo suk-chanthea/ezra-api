@@ -21,25 +21,39 @@ INSERT INTO roles (name, description, permissions) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================
--- 2. Users table (WITHOUT band_id initially)
+-- 2. Users table
 -- ============================
+-- Note: band_id and church_id foreign keys will be added after those tables are created
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
     fullname VARCHAR(100) NOT NULL,
     profile VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
+    email_verified BOOLEAN DEFAULT false,
     password VARCHAR(255),
+    phone VARCHAR(50),
+    birthday DATE,
+    bio TEXT,
     role VARCHAR(20) DEFAULT 'user',
     token VARCHAR(255),
     provider VARCHAR(50) DEFAULT 'local',
     provider_id VARCHAR(255),
+    church_id INTEGER,
+    church_status VARCHAR(20) DEFAULT 'pending' CHECK (church_status IN ('pending', 'approved', 'rejected')),
+    band_id INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_provider_id ON users(provider, provider_id);
+CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
+CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
+CREATE INDEX IF NOT EXISTS idx_users_birthday ON users(birthday);
+CREATE INDEX IF NOT EXISTS idx_users_church_id ON users(church_id);
+CREATE INDEX IF NOT EXISTS idx_users_church_status ON users(church_status);
+CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
 
 -- ============================
 -- 3. Churches table
@@ -273,37 +287,17 @@ CREATE INDEX IF NOT EXISTS idx_bands_name ON bands(name);
 CREATE INDEX IF NOT EXISTS idx_bands_is_public ON bands(is_public);
 
 -- ============================
--- 11b. NOW add band_id column to users table
+-- 11b. Add foreign key constraints to users table (after bands and churches tables exist)
 -- ============================
-ALTER TABLE users ADD COLUMN IF NOT EXISTS band_id INTEGER;
-
--- Add foreign key constraint
+-- Add foreign key constraint for band_id
 ALTER TABLE users
 ADD CONSTRAINT fk_users_band_id 
 FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE SET NULL;
-
--- Add index
-CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
-
--- ============================
--- 11c. Add birthday, church_id, and bio to users table
--- ============================
-ALTER TABLE users ADD COLUMN IF NOT EXISTS birthday DATE;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS church_id INTEGER;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS church_status VARCHAR(20) DEFAULT 'pending';  -- 'pending', 'approved', 'rejected'
 
 -- Add foreign key constraint for church_id
 ALTER TABLE users
 ADD CONSTRAINT fk_users_church_id 
 FOREIGN KEY (church_id) REFERENCES churches(id) ON DELETE SET NULL;
-
--- Add check constraint for church_status
-ALTER TABLE users ADD CONSTRAINT users_church_status_check CHECK (church_status IN ('pending', 'approved', 'rejected'));
-
-CREATE INDEX IF NOT EXISTS idx_users_church_id ON users(church_id);
-CREATE INDEX IF NOT EXISTS idx_users_birthday ON users(birthday);
-CREATE INDEX IF NOT EXISTS idx_users_church_status ON users(church_status);
 
 -- ============================
 -- 12. Band_Musics Junction Table (Many-to-Many)

@@ -34,6 +34,13 @@ type VerifyOTPRequest struct {
 	Purpose string `json:"purpose" binding:"required,oneof=email_verification password_reset login"`
 }
 
+// ResetPasswordRequest represents password reset request (after OTP verification)
+type ResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+	OTPCode     string `json:"otp_code" binding:"required,min=6,max=6"` // Must provide OTP for verification
+}
+
 // CreateEventRequest represents event creation input
 type CreateEventRequest struct {
 	Title     string    `json:"title" binding:"required,min=1,max=200"`

@@ -77,6 +77,9 @@ func (r *Router) Setup() *gin.Engine {
 	router.POST("/otp/send", r.otpHandler.SendOTP)
 	router.POST("/otp/verify", r.otpHandler.VerifyOTP)
 
+	// Password reset route (public)
+	router.POST("/auth/reset-password", r.authHandler.ResetPassword)
+
 	// Public donation routes (companies can donate without auth)
 	router.POST("/donations", r.donationHandler.Create)
 	router.POST("/donations/:id/pay", r.donationHandler.InitiatePayment)

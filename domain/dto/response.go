@@ -63,19 +63,22 @@ type SuccessResponse struct {
 
 // UserResponse represents user output (without sensitive data)
 type UserResponse struct {
-	ID           uint            `json:"id"`
-	Username     string          `json:"username"`
-	Fullname     string          `json:"fullname"`
-	Profile      string          `json:"profile,omitempty"`
-	Email        string          `json:"email"`
-	Role         string          `json:"role"`
-	Birthday     *time.Time      `json:"birthday,omitempty"`
-	ChurchID     *uint           `json:"church_id,omitempty"`
-	Church       *ChurchResponse `json:"church,omitempty"`
-	ChurchStatus string          `json:"church_status,omitempty"` // pending, approved, rejected
-	Bio          string          `json:"bio,omitempty"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ID            uint            `json:"id"`
+	Username      string          `json:"username"`
+	Fullname      string          `json:"fullname"`
+	Profile       string          `json:"profile,omitempty"`
+	Email         string          `json:"email"`
+	EmailVerified bool            `json:"email_verified"`
+	Phone         string          `json:"phone,omitempty"`
+	Role          string          `json:"role"`
+	Birthday      *time.Time      `json:"birthday,omitempty"`
+	ChurchID      *uint           `json:"church_id,omitempty"`
+	Church        *ChurchResponse `json:"church,omitempty"`
+	ChurchStatus  string          `json:"church_status,omitempty"` // pending, approved, rejected
+	BandID        *uint           `json:"band_id,omitempty"`
+	Bio           string          `json:"bio,omitempty"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 // BookingResponse represents booking output

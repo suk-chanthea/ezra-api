@@ -10,22 +10,25 @@ import (
 
 // UserModel is the GORM model for database
 type UserModel struct {
-	ID           uint       `gorm:"primaryKey;autoIncrement"`
-	Username     string     `gorm:"size:100;not null"`
-	Fullname     string     `gorm:"size:100;not null"`
-	Profile      string     `gorm:"size:255"`
-	Email        string     `gorm:"size:100;unique;not null"`
-	Password     string     `gorm:"size:255"`
-	Role         string     `gorm:"size:20;default:user"`
-	Token        string     `gorm:"size:255"`
-	Provider     string     `gorm:"size:50;default:local"`
-	ProviderID   string     `gorm:"size:255;index"`
-	Birthday     *time.Time `gorm:"type:date"`
-	ChurchID     *uint      `gorm:"index"`
-	ChurchStatus string     `gorm:"size:20;default:pending"` // pending, approved, rejected
-	Bio          string     `gorm:"type:text"`
-	CreatedAt    time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `gorm:"autoUpdateTime"`
+	ID            uint       `gorm:"primaryKey;autoIncrement"`
+	Username      string     `gorm:"size:100;not null"`
+	Fullname      string     `gorm:"size:100;not null"`
+	Profile       string     `gorm:"size:255"`
+	Email         string     `gorm:"size:100;unique;not null"`
+	EmailVerified bool       `gorm:"default:false"`
+	Phone         string     `gorm:"size:50"`
+	Password      string     `gorm:"size:255"`
+	Role          string     `gorm:"size:20;default:user"`
+	Token         string     `gorm:"size:255"`
+	Provider      string     `gorm:"size:50;default:local"`
+	ProviderID    string     `gorm:"size:255;index"`
+	Birthday      *time.Time `gorm:"type:date"`
+	ChurchID      *uint      `gorm:"index"`
+	ChurchStatus  string     `gorm:"size:20;default:pending"` // pending, approved, rejected
+	BandID        *uint      `gorm:"index"`
+	Bio           string     `gorm:"type:text"`
+	CreatedAt     time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt     time.Time  `gorm:"autoUpdateTime"`
 
 }
 
@@ -101,43 +104,49 @@ func (r *userRepositoryImpl) Delete(id uint) error {
 
 func (r *userRepositoryImpl) entityToModel(user *entity.User) *UserModel {
 	return &UserModel{
-		ID:           user.ID,
-		Username:     user.Username,
-		Fullname:     user.Fullname,
-		Profile:      user.Profile,
-		Email:        user.Email,
-		Password:     user.Password,
-		Role:         user.Role,
-		Token:        user.Token,
-		Provider:     user.Provider,
-		ProviderID:   user.ProviderID,
-		Birthday:     user.Birthday,
-		ChurchID:     user.ChurchID,
-		ChurchStatus: string(user.ChurchStatus),
-		Bio:          user.Bio,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
+		ID:            user.ID,
+		Username:      user.Username,
+		Fullname:      user.Fullname,
+		Profile:       user.Profile,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
+		Phone:         user.Phone,
+		Password:      user.Password,
+		Role:          user.Role,
+		Token:         user.Token,
+		Provider:      user.Provider,
+		ProviderID:    user.ProviderID,
+		Birthday:      user.Birthday,
+		ChurchID:      user.ChurchID,
+		ChurchStatus:  string(user.ChurchStatus),
+		BandID:        user.BandID,
+		Bio:           user.Bio,
+		CreatedAt:     user.CreatedAt,
+		UpdatedAt:     user.UpdatedAt,
 	}
 }
 
 func (r *userRepositoryImpl) modelToEntity(model *UserModel) *entity.User {
 	user := &entity.User{
-		ID:           model.ID,
-		Username:     model.Username,
-		Fullname:     model.Fullname,
-		Profile:      model.Profile,
-		Email:        model.Email,
-		Password:     model.Password,
-		Role:         model.Role,
-		Token:        model.Token,
-		Provider:     model.Provider,
-		ProviderID:   model.ProviderID,
-		Birthday:     model.Birthday,
-		ChurchID:     model.ChurchID,
-		ChurchStatus: entity.ChurchMembershipStatus(model.ChurchStatus),
-		Bio:          model.Bio,
-		CreatedAt:    model.CreatedAt,
-		UpdatedAt:    model.UpdatedAt,
+		ID:            model.ID,
+		Username:      model.Username,
+		Fullname:      model.Fullname,
+		Profile:       model.Profile,
+		Email:         model.Email,
+		EmailVerified: model.EmailVerified,
+		Phone:         model.Phone,
+		Password:      model.Password,
+		Role:          model.Role,
+		Token:         model.Token,
+		Provider:      model.Provider,
+		ProviderID:    model.ProviderID,
+		Birthday:      model.Birthday,
+		ChurchID:      model.ChurchID,
+		ChurchStatus:  entity.ChurchMembershipStatus(model.ChurchStatus),
+		BandID:        model.BandID,
+		Bio:           model.Bio,
+		CreatedAt:     model.CreatedAt,
+		UpdatedAt:     model.UpdatedAt,
 	}
 
 	return user

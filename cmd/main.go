@@ -220,7 +220,7 @@ func main() {
 	}
 
 	// Initialize use cases (Application layer)
-	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey, config.GoogleClientID)
+	authUseCase := usecase.NewAuthUseCase(userRepo, otpRepo, config.SecretKey, config.GoogleClientID)
 	musicUseCase := usecase.NewMusicUseCase(musicRepo)
 	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo, notificationRepo)
 	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)

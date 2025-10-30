@@ -28,12 +28,8 @@ DROP TRIGGER IF EXISTS update_churches_updated_at ON churches;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_church_id;
 
--- Drop the columns
-ALTER TABLE users DROP COLUMN IF EXISTS band_id;
-ALTER TABLE users DROP COLUMN IF EXISTS church_id;
-ALTER TABLE users DROP COLUMN IF EXISTS church_status;
-ALTER TABLE users DROP COLUMN IF EXISTS birthday;
-ALTER TABLE users DROP COLUMN IF EXISTS bio;
+-- Drop the columns (no need since table will be dropped entirely)
+-- These columns are now part of the CREATE TABLE, not ALTER TABLE
 
 -- ============================
 -- 3. Drop tables in reverse dependency order
@@ -187,6 +183,8 @@ DROP INDEX IF EXISTS idx_settings_user_id;
 
 -- Users indexes
 DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS idx_users_email_verified;
+DROP INDEX IF EXISTS idx_users_phone;
 DROP INDEX IF EXISTS idx_users_provider_id;
 DROP INDEX IF EXISTS idx_users_band_id;
 DROP INDEX IF EXISTS idx_users_church_id;

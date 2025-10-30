@@ -145,3 +145,41 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req dto.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			var message string
+			switch e.Tag() {
+			case "required":
+				message = e.Field() + " is required"
+			case "email":
+				message = "Invalid email format"
+			case "min":
+				if e.Field() == "NewPassword" {
+					message = "Password must be at least 6 characters"
+				} else {
+					message = "OTP code must be 6 digits"
+				}
+			case "max":
+				message = "OTP code must be 6 digits"
+			default:
+				message = "Invalid " + e.Field()
+			}
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Errors: message})
+			return
+		}
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
+		return
+	}
+
+	response, err := h.authUseCase.ResetPassword(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

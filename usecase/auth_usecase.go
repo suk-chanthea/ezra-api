@@ -18,19 +18,22 @@ type AuthUseCase interface {
 	Logout(userID uint) error
 	DeleteUser(userID uint) error
 	GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error)
+	ResetPassword(req *dto.ResetPasswordRequest) (*dto.SuccessResponse, error)
 	ValidateToken(token string) (*jwt.Token, error)
 	VerifyTokenInDatabase(userID uint, token string) error
 }
 
 type authUseCase struct {
 	userRepo       repository.UserRepository
+	otpRepo        repository.OTPRepository
 	secretKey      []byte
 	googleClientID string
 }
 
-func NewAuthUseCase(repo repository.UserRepository, secret, googleClientID string) AuthUseCase {
+func NewAuthUseCase(repo repository.UserRepository, otpRepo repository.OTPRepository, secret, googleClientID string) AuthUseCase {
 	return &authUseCase{
 		userRepo:       repo,
+		otpRepo:        otpRepo,
 		secretKey:      []byte(secret),
 		googleClientID: googleClientID,
 	}
@@ -56,6 +59,10 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 
 	// Create entity
 	user := entity.NewUser(req.Username, req.Fullname, req.Email, string(hash))
+	
+	// Mark email as verified if registration includes verified email flag
+	// Email should be verified via OTP before registration
+	user.EmailVerified = true
 
 	// Save to database
 	if err := uc.userRepo.Save(user); err != nil {
@@ -176,6 +183,53 @@ func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture str
 	return &dto.AuthResponse{
 		Message: "google login successful",
 		Token:   token,
+	}, nil
+}
+
+func (uc *authUseCase) ResetPassword(req *dto.ResetPasswordRequest) (*dto.SuccessResponse, error) {
+	// First, verify the OTP is valid and verified
+	otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(req.Email, req.OTPCode, entity.OTPPurpose("password_reset"))
+	if err != nil {
+		return nil, errors.New("invalid OTP code")
+	}
+
+	// Check if OTP is verified and not expired
+	if !otp.Verified {
+		return nil, errors.New("OTP not verified. Please verify OTP first")
+	}
+
+	if otp.IsExpired() {
+		return nil, errors.New("OTP has expired. Please request a new one")
+	}
+
+	// Find user by email
+	user, err := uc.userRepo.FindByEmail(req.Email)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	// Hash new password
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, errors.New("failed to hash password")
+	}
+
+	// Update password
+	user.Password = string(hash)
+	user.UpdatedAt = time.Now()
+
+	if err := uc.userRepo.Update(user); err != nil {
+		return nil, errors.New("failed to update password")
+	}
+
+	// Invalidate all existing tokens (logout all sessions)
+	uc.userRepo.UpdateToken(user.ID, "")
+
+	// Delete the used OTP
+	go uc.otpRepo.DeleteByEmail(req.Email)
+
+	return &dto.SuccessResponse{
+		Message: "password reset successfully",
 	}, nil
 }
 
