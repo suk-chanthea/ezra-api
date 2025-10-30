@@ -8,6 +8,13 @@ type AuthResponse struct {
 	Token   string `json:"token"`
 }
 
+// OTPResponse represents OTP operation response
+type OTPResponse struct {
+	Message   string    `json:"message"`
+	Email     string    `json:"email"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+}
+
 // MusicResponse represents music output
 type MusicResponse struct {
 	ID          uint      `json:"id"`

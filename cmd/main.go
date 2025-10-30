@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/suk-chanthea/ezra/infrastructure/email"
 	"github.com/suk-chanthea/ezra/infrastructure/firebase"
 	"github.com/suk-chanthea/ezra/infrastructure/payment"
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
@@ -29,6 +30,12 @@ type Config struct {
 	PaywayReturnURL        string
 	PaywayContinueURL      string
 	PaywayCallbackURL      string
+	SMTPHost               string
+	SMTPPort               string
+	SMTPUsername           string
+	SMTPPassword           string
+	SMTPFrom               string
+	OTPExpiry              int // in minutes
 }
 
 func loadConfig() *Config {
@@ -92,6 +99,36 @@ func loadConfig() *Config {
 		paywayCallbackURL = "http://localhost:8080/webhooks/payway" // Backend webhook URL
 	}
 
+	// SMTP configuration for sending OTP emails
+	smtpHost := os.Getenv("SMTP_HOST")
+	if smtpHost == "" {
+		smtpHost = "smtp.gmail.com" // Default Gmail SMTP
+	}
+
+	smtpPort := os.Getenv("SMTP_PORT")
+	if smtpPort == "" {
+		smtpPort = "587" // Default SMTP port for TLS
+	}
+
+	smtpUsername := os.Getenv("SMTP_USERNAME")
+	// Required: Set via environment variable (your Gmail address)
+
+	smtpPassword := os.Getenv("SMTP_PASSWORD")
+	// Required: Set via environment variable (Gmail App Password)
+
+	smtpFrom := os.Getenv("SMTP_FROM")
+	if smtpFrom == "" {
+		smtpFrom = smtpUsername // Use same as username if not specified
+	}
+
+	otpExpiry := 10 // Default 10 minutes
+	if otpExpiryEnv := os.Getenv("OTP_EXPIRY_MINUTES"); otpExpiryEnv != "" {
+		// Parse OTP expiry from env if provided
+		if exp, err := time.ParseDuration(otpExpiryEnv + "m"); err == nil {
+			otpExpiry = int(exp.Minutes())
+		}
+	}
+
 	return &Config{
 		Port:                   port,
 		PostgresURL:            pg,
@@ -105,6 +142,12 @@ func loadConfig() *Config {
 		PaywayReturnURL:        paywayReturnURL,
 		PaywayContinueURL:      paywayContinueURL,
 		PaywayCallbackURL:      paywayCallbackURL,
+		SMTPHost:               smtpHost,
+		SMTPPort:               smtpPort,
+		SMTPUsername:           smtpUsername,
+		SMTPPassword:           smtpPassword,
+		SMTPFrom:               smtpFrom,
+		OTPExpiry:              otpExpiry,
 	}
 }
 
@@ -141,6 +184,7 @@ func main() {
 	donationRepo := persistence.NewDonationRepository(db)
 	supporterRepo := persistence.NewSupporterRepository(db)
 	churchRepo := persistence.NewChurchRepository(db)
+	otpRepo := persistence.NewOTPRepository(db)
 
 	// Initialize Firebase Cloud Messaging service
 	fcmService, err := firebase.NewFCMService(config.FirebaseCredentialPath, deviceTokenRepo)
@@ -161,6 +205,20 @@ func main() {
 	paywayService := payment.NewPaywayService(paywayConfig)
 	log.Println("✅ Payway service initialized")
 
+	// Initialize Email service for OTP
+	emailService := email.NewSMTPEmailService(
+		config.SMTPHost,
+		config.SMTPPort,
+		config.SMTPUsername,
+		config.SMTPPassword,
+		config.SMTPFrom,
+	)
+	if config.SMTPUsername == "" || config.SMTPPassword == "" {
+		log.Println("⚠️  Warning: SMTP credentials not set. OTP emails will not be sent.")
+	} else {
+		log.Println("✅ Email service initialized")
+	}
+
 	// Initialize use cases (Application layer)
 	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey, config.GoogleClientID)
 	musicUseCase := usecase.NewMusicUseCase(musicRepo)
@@ -173,6 +231,7 @@ func main() {
 	donationUseCase := usecase.NewDonationUseCase(donationRepo, userRepo, eventRepo, paywayService)
 	supporterUseCase := usecase.NewSupporterUseCase(supporterRepo, donationRepo)
 	churchUseCase := usecase.NewChurchUseCase(churchRepo, userRepo)
+	otpUseCase := usecase.NewOTPUseCase(otpRepo, userRepo, emailService, config.OTPExpiry)
 
 	// Initialize handlers (Interface layer)
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -187,9 +246,10 @@ func main() {
 	donationHandler := handler.NewDonationHandler(donationUseCase)
 	supporterHandler := handler.NewSupporterHandler(supporterUseCase)
 	churchHandler := handler.NewChurchHandler(churchUseCase)
+	otpHandler := handler.NewOTPHandler(otpUseCase)
 
 	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, notificationHandler, deviceTokenHandler, donationHandler, supporterHandler, churchHandler, authUseCase)
+	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, notificationHandler, deviceTokenHandler, donationHandler, supporterHandler, churchHandler, otpHandler, authUseCase)
 	engine := r.Setup()
 
 	// Start server

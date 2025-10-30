@@ -90,7 +90,26 @@ CREATE INDEX IF NOT EXISTS idx_tokens_is_active ON tokens(is_active);
 CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at);
 
 -- ============================
--- 5. Settings table
+-- 5. OTP table (for email verification and password reset)
+-- ============================
+CREATE TABLE IF NOT EXISTS otps (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_otps_email ON otps(email);
+CREATE INDEX IF NOT EXISTS idx_otps_purpose ON otps(purpose);
+CREATE INDEX IF NOT EXISTS idx_otps_expires_at ON otps(expires_at);
+CREATE INDEX IF NOT EXISTS idx_otps_email_purpose ON otps(email, purpose);
+
+-- ============================
+-- 6. Settings table
 -- ============================
 CREATE TABLE IF NOT EXISTS settings (
     id SERIAL PRIMARY KEY,

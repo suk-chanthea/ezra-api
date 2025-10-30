@@ -21,6 +21,19 @@ type GoogleLoginRequest struct {
 	IDToken string `json:"id_token" binding:"required"`
 }
 
+// SendOTPRequest represents OTP generation request
+type SendOTPRequest struct {
+	Email   string `json:"email" binding:"required,email"`
+	Purpose string `json:"purpose" binding:"required,oneof=email_verification password_reset login"`
+}
+
+// VerifyOTPRequest represents OTP verification request
+type VerifyOTPRequest struct {
+	Email   string `json:"email" binding:"required,email"`
+	Code    string `json:"code" binding:"required,min=6,max=6"`
+	Purpose string `json:"purpose" binding:"required,oneof=email_verification password_reset login"`
+}
+
 // CreateEventRequest represents event creation input
 type CreateEventRequest struct {
 	Title     string    `json:"title" binding:"required,min=1,max=200"`

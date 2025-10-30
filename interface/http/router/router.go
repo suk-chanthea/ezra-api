@@ -21,6 +21,7 @@ type Router struct {
 	donationHandler     *handler.DonationHandler
 	supporterHandler    *handler.SupporterHandler
 	churchHandler       *handler.ChurchHandler
+	otpHandler          *handler.OTPHandler
 	authUseCase         usecase.AuthUseCase
 }
 
@@ -37,6 +38,7 @@ func NewRouter(
 	donationHandler *handler.DonationHandler,
 	supporterHandler *handler.SupporterHandler,
 	churchHandler *handler.ChurchHandler,
+	otpHandler *handler.OTPHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
@@ -52,6 +54,7 @@ func NewRouter(
 		donationHandler:     donationHandler,
 		supporterHandler:    supporterHandler,
 		churchHandler:       churchHandler,
+		otpHandler:          otpHandler,
 		authUseCase:         authUseCase,
 	}
 }
@@ -69,6 +72,10 @@ func (r *Router) Setup() *gin.Engine {
 	router.POST("/register", r.authHandler.Register)
 	router.POST("/login", r.authHandler.Login)
 	router.POST("/auth/google", r.authHandler.GoogleLogin)
+
+	// OTP routes (public - for email verification)
+	router.POST("/otp/send", r.otpHandler.SendOTP)
+	router.POST("/otp/verify", r.otpHandler.VerifyOTP)
 
 	// Public donation routes (companies can donate without auth)
 	router.POST("/donations", r.donationHandler.Create)

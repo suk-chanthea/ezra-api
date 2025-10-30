@@ -12,6 +12,7 @@ DROP TRIGGER IF EXISTS update_music_sheets_updated_at ON music_sheets;
 DROP TRIGGER IF EXISTS update_music_audio_updated_at ON music_audio;
 DROP TRIGGER IF EXISTS update_musics_updated_at ON musics;
 DROP TRIGGER IF EXISTS update_settings_updated_at ON settings;
+DROP TRIGGER IF EXISTS update_otps_updated_at ON otps;
 DROP TRIGGER IF EXISTS update_tokens_updated_at ON tokens;
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 DROP TRIGGER IF EXISTS create_settings_for_new_user ON users;
@@ -82,6 +83,9 @@ DROP TABLE IF EXISTS musics CASCADE;
 
 -- Drop tokens (depends on users)
 DROP TABLE IF EXISTS tokens CASCADE;
+
+-- Drop otps (no dependencies)
+DROP TABLE IF EXISTS otps CASCADE;
 
 -- Drop settings (depends on users)
 DROP TABLE IF EXISTS settings CASCADE;
@@ -171,6 +175,12 @@ DROP INDEX IF EXISTS idx_tokens_user_id;
 DROP INDEX IF EXISTS idx_tokens_token;
 DROP INDEX IF EXISTS idx_tokens_is_active;
 DROP INDEX IF EXISTS idx_tokens_expires_at;
+
+-- OTPs indexes
+DROP INDEX IF EXISTS idx_otps_email;
+DROP INDEX IF EXISTS idx_otps_purpose;
+DROP INDEX IF EXISTS idx_otps_expires_at;
+DROP INDEX IF EXISTS idx_otps_email_purpose;
 
 -- Settings indexes
 DROP INDEX IF EXISTS idx_settings_user_id;
