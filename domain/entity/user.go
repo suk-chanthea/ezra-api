@@ -2,20 +2,34 @@ package entity
 
 import "time"
 
+// ChurchMembershipStatus represents the status of a user's church membership
+type ChurchMembershipStatus string
+
+const (
+	ChurchStatusPending  ChurchMembershipStatus = "pending"
+	ChurchStatusApproved ChurchMembershipStatus = "approved"
+	ChurchStatusRejected ChurchMembershipStatus = "rejected"
+)
+
 // User represents the core business entity
 type User struct {
-	ID         uint
-	Username   string
-	Fullname   string
-	Profile    string
-	Email      string
-	Password   string
-	Role       string
-	Token      string
-	Provider   string // "local", "google", etc.
-	ProviderID string // Google ID, Facebook ID, etc.
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID           uint
+	Username     string
+	Fullname     string
+	Profile      string
+	Email        string
+	Password     string
+	Role         string
+	Token        string
+	Provider     string                 // "local", "google", etc.
+	ProviderID   string                 // Google ID, Facebook ID, etc.
+	Birthday     *time.Time             // User's date of birth
+	ChurchID     *uint                  // Optional link to church
+	Church       *Church                // Related church
+	ChurchStatus ChurchMembershipStatus // pending, approved, rejected
+	Bio          string                 // User biography/description
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // NewUser creates a new user entity for local registration

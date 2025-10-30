@@ -56,14 +56,19 @@ type SuccessResponse struct {
 
 // UserResponse represents user output (without sensitive data)
 type UserResponse struct {
-	ID        uint      `json:"id"`
-	Username  string    `json:"username"`
-	Fullname  string    `json:"fullname"`
-	Profile   string    `json:"profile,omitempty"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           uint            `json:"id"`
+	Username     string          `json:"username"`
+	Fullname     string          `json:"fullname"`
+	Profile      string          `json:"profile,omitempty"`
+	Email        string          `json:"email"`
+	Role         string          `json:"role"`
+	Birthday     *time.Time      `json:"birthday,omitempty"`
+	ChurchID     *uint           `json:"church_id,omitempty"`
+	Church       *ChurchResponse `json:"church,omitempty"`
+	ChurchStatus string          `json:"church_status,omitempty"` // pending, approved, rejected
+	Bio          string          `json:"bio,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 // BookingResponse represents booking output
@@ -158,4 +163,96 @@ type NotificationResponse struct {
 	ReadAt        *time.Time `json:"read_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+// DonationResponse represents donation output
+type DonationResponse struct {
+	ID            uint           `json:"id"`
+	Type          string         `json:"type"`
+	DonorType     string         `json:"donor_type"`
+	UserID        *uint          `json:"user_id,omitempty"`
+	SupporterID   *uint          `json:"supporter_id,omitempty"`
+	CompanyName   string         `json:"company_name,omitempty"`
+	CompanyEmail  string         `json:"company_email,omitempty"`
+	CompanyPhone  string         `json:"company_phone,omitempty"`
+	Amount        float64        `json:"amount"`
+	Currency      string         `json:"currency"`
+	Message       string         `json:"message,omitempty"`
+	Status        string         `json:"status"`
+	TransactionID string         `json:"transaction_id,omitempty"`
+	PaymentMethod string         `json:"payment_method,omitempty"`
+	EventID       *uint          `json:"event_id,omitempty"`
+	User          *UserResponse  `json:"user,omitempty"`
+	Supporter     *SupporterResponse `json:"supporter,omitempty"`
+	Event         *EventResponse `json:"event,omitempty"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	
+	// Payment info (included if initiate_payment=true)
+	PaymentInfo   *InitiatePaymentResponse `json:"payment_info,omitempty"`
+}
+
+// DonationStatsResponse represents donation statistics
+type DonationStatsResponse struct {
+	TotalAmount        float64 `json:"total_amount"`
+	TotalDonations     int64   `json:"total_donations"`
+	TotalSponsors      int64   `json:"total_sponsors"`
+	DonateAmount       float64 `json:"donate_amount"`
+	SponsorAmount      float64 `json:"sponsor_amount"`
+	UserDonations      int64   `json:"user_donations"`
+	CompanyDonations   int64   `json:"company_donations"`
+}
+
+// InitiatePaymentResponse represents payment initiation response
+type InitiatePaymentResponse struct {
+	DonationID      uint   `json:"donation_id"`
+	TransactionID   string `json:"transaction_id"`
+	PaymentURL      string `json:"payment_url,omitempty"`      // For card payments
+	QRCode          string `json:"qr_code,omitempty"`          // For QR payments (base64)
+	Amount          string `json:"amount"`
+	Currency        string `json:"currency"`
+	PaymentMethod   string `json:"payment_method"` // "qr" or "card"
+	ExpiresAt       *time.Time `json:"expires_at,omitempty"`   // QR expiration time (3 minutes)
+	ExpiresInSeconds int    `json:"expires_in_seconds,omitempty"` // Seconds until expiration
+	Message         string `json:"message"`
+}
+
+// SupporterResponse represents supporter output
+type SupporterResponse struct {
+	ID           uint          `json:"id"`
+	Name         string        `json:"name"`
+	Email        string        `json:"email"`
+	Phone        string        `json:"phone,omitempty"`
+	Type         string        `json:"type"`
+	Website      string        `json:"website,omitempty"`
+	Address      string        `json:"address,omitempty"`
+	Logo         string        `json:"logo,omitempty"`
+	Description  string        `json:"description,omitempty"`
+	UserID       *uint         `json:"user_id,omitempty"`
+	User         *UserResponse `json:"user,omitempty"`
+	TotalDonations int         `json:"total_donations,omitempty"` // Count of donations from this supporter
+	TotalAmount    float64     `json:"total_amount,omitempty"`    // Total donation amount
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+}
+
+// ChurchResponse represents church output
+type ChurchResponse struct {
+	ID              uint         `json:"id"`
+	Fullname        string       `json:"fullname"`
+	Address         string       `json:"address,omitempty"`
+	Phone           string       `json:"phone,omitempty"`
+	Email           string       `json:"email,omitempty"`
+	Website         string       `json:"website,omitempty"`
+	PastorName      string       `json:"pastor_name,omitempty"`
+	Description     string       `json:"description,omitempty"`
+	Logo            string       `json:"logo,omitempty"`
+	EstablishedDate *time.Time   `json:"established_date,omitempty"`
+	Denomination    string       `json:"denomination,omitempty"`
+	OwnerID         *uint        `json:"owner_id,omitempty"`
+	Owner           *UserResponse `json:"owner,omitempty"`
+	MemberCount     int          `json:"member_count,omitempty"` // Computed: count of approved members
+	PendingCount    int          `json:"pending_count,omitempty"` // Computed: count of pending requests
+	CreatedAt       time.Time    `json:"created_at"`
+	UpdatedAt       time.Time    `json:"updated_at"`
 }

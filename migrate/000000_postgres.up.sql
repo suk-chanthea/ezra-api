@@ -42,7 +42,32 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_provider_id ON users(provider, provider_id);
 
 -- ============================
--- 3. Tokens table (for multi-device/session support)
+-- 3. Churches table
+-- ============================
+CREATE TABLE IF NOT EXISTS churches (
+    id SERIAL PRIMARY KEY,
+    fullname VARCHAR(255) NOT NULL UNIQUE,
+    address TEXT,
+    phone VARCHAR(50),
+    email VARCHAR(255),
+    website VARCHAR(255),
+    pastor_name VARCHAR(255),
+    description TEXT,
+    logo VARCHAR(255),
+    established_date DATE,
+    denomination VARCHAR(100),
+    owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- Church owner/admin
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_churches_fullname ON churches(fullname);
+CREATE INDEX IF NOT EXISTS idx_churches_email ON churches(email);
+CREATE INDEX IF NOT EXISTS idx_churches_denomination ON churches(denomination);
+CREATE INDEX IF NOT EXISTS idx_churches_owner_id ON churches(owner_id);
+
+-- ============================
+-- 4. Tokens table (for multi-device/session support)
 -- ============================
 CREATE TABLE IF NOT EXISTS tokens (
     id SERIAL PRIMARY KEY,
@@ -65,7 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_tokens_is_active ON tokens(is_active);
 CREATE INDEX IF NOT EXISTS idx_tokens_expires_at ON tokens(expires_at);
 
 -- ============================
--- 4. Settings table
+-- 5. Settings table
 -- ============================
 CREATE TABLE IF NOT EXISTS settings (
     id SERIAL PRIMARY KEY,
@@ -85,7 +110,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE INDEX IF NOT EXISTS idx_settings_user_id ON settings(user_id);
 
 -- ============================
--- 5. Musics table (Core music metadata)
+-- 6. Musics table (Core music metadata)
 -- ============================
 CREATE TABLE IF NOT EXISTS musics (
     id SERIAL PRIMARY KEY,
@@ -242,6 +267,26 @@ FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
 
 -- ============================
+-- 11c. Add birthday, church_id, and bio to users table
+-- ============================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birthday DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS church_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS church_status VARCHAR(20) DEFAULT 'pending';  -- 'pending', 'approved', 'rejected'
+
+-- Add foreign key constraint for church_id
+ALTER TABLE users
+ADD CONSTRAINT fk_users_church_id 
+FOREIGN KEY (church_id) REFERENCES churches(id) ON DELETE SET NULL;
+
+-- Add check constraint for church_status
+ALTER TABLE users ADD CONSTRAINT users_church_status_check CHECK (church_status IN ('pending', 'approved', 'rejected'));
+
+CREATE INDEX IF NOT EXISTS idx_users_church_id ON users(church_id);
+CREATE INDEX IF NOT EXISTS idx_users_birthday ON users(birthday);
+CREATE INDEX IF NOT EXISTS idx_users_church_status ON users(church_status);
+
+-- ============================
 -- 12. Band_Musics Junction Table (Many-to-Many)
 -- ============================
 CREATE TABLE IF NOT EXISTS band_musics (
@@ -375,6 +420,13 @@ BEFORE UPDATE ON bands
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
+-- churches table
+DROP TRIGGER IF EXISTS update_churches_updated_at ON churches;
+CREATE TRIGGER update_churches_updated_at
+BEFORE UPDATE ON churches
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================
 -- 16. Notifications table
 -- ============================
@@ -439,6 +491,97 @@ CREATE TRIGGER update_device_tokens_updated_at
 BEFORE UPDATE ON device_tokens
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================
+-- 17. Donations table (Donations and Sponsorships)
+-- ============================
+CREATE TABLE IF NOT EXISTS donations (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,  -- 'donate' or 'sponsor'
+    donor_type VARCHAR(50) NOT NULL,  -- 'user' or 'company'
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    company_name VARCHAR(255),
+    company_email VARCHAR(255),
+    company_phone VARCHAR(50),
+    amount DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    message TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    transaction_id VARCHAR(255),
+    payment_method VARCHAR(100),
+    qr_expires_at TIMESTAMPTZ,  -- QR code expiration (3 minutes for donate type)
+    event_id INTEGER REFERENCES events(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    CHECK (type IN ('donate', 'sponsor')),
+    CHECK (donor_type IN ('user', 'company', 'organization', 'church')),
+    CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+    CHECK (
+        (donor_type = 'user' AND user_id IS NOT NULL) OR
+        (donor_type IN ('company', 'organization', 'church') AND company_name IS NOT NULL AND company_email IS NOT NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_donations_type ON donations(type);
+CREATE INDEX IF NOT EXISTS idx_donations_donor_type ON donations(donor_type);
+CREATE INDEX IF NOT EXISTS idx_donations_user_id ON donations(user_id);
+CREATE INDEX IF NOT EXISTS idx_donations_event_id ON donations(event_id);
+CREATE INDEX IF NOT EXISTS idx_donations_status ON donations(status);
+CREATE INDEX IF NOT EXISTS idx_donations_created_at ON donations(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_donations_transaction_id ON donations(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_donations_qr_expires_at ON donations(qr_expires_at);
+
+-- donations table trigger
+DROP TRIGGER IF EXISTS update_donations_updated_at ON donations;
+CREATE TRIGGER update_donations_updated_at
+BEFORE UPDATE ON donations
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================
+-- 18. Supporters table (Companies and Organizations)
+-- ============================
+CREATE TABLE IF NOT EXISTS supporters (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,  -- Company/Organization/Church name
+    email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(50),
+    type VARCHAR(50) NOT NULL DEFAULT 'company',  -- 'company', 'organization', or 'church'
+    website VARCHAR(255),
+    address TEXT,
+    logo VARCHAR(255),
+    description TEXT,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- Optional: user who manages this supporter
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    CHECK (type IN ('company', 'organization', 'church'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_supporters_email ON supporters(email);
+CREATE INDEX IF NOT EXISTS idx_supporters_user_id ON supporters(user_id);
+CREATE INDEX IF NOT EXISTS idx_supporters_type ON supporters(type);
+CREATE INDEX IF NOT EXISTS idx_supporters_name ON supporters(name);
+
+-- supporters table trigger
+DROP TRIGGER IF EXISTS update_supporters_updated_at ON supporters;
+CREATE TRIGGER update_supporters_updated_at
+BEFORE UPDATE ON supporters
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- Add supporter_id to donations table
+ALTER TABLE donations ADD COLUMN IF NOT EXISTS supporter_id INTEGER REFERENCES supporters(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_donations_supporter_id ON donations(supporter_id);
+
+-- Update the constraint to allow supporter reference
+ALTER TABLE donations DROP CONSTRAINT IF EXISTS donations_check;
+ALTER TABLE donations ADD CONSTRAINT donations_check CHECK (
+    (donor_type = 'user' AND user_id IS NOT NULL) OR
+    (donor_type IN ('company', 'organization', 'church') AND (
+        (company_name IS NOT NULL AND company_email IS NOT NULL) OR 
+        supporter_id IS NOT NULL
+    ))
+);
 
 -- ============================
 -- NOTES FOR DOWN MIGRATION

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/suk-chanthea/ezra/infrastructure/firebase"
+	"github.com/suk-chanthea/ezra/infrastructure/payment"
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
 	"github.com/suk-chanthea/ezra/interface/http/handler"
 	"github.com/suk-chanthea/ezra/interface/http/router"
@@ -21,6 +22,13 @@ type Config struct {
 	SecretKey              string
 	GoogleClientID         string
 	FirebaseCredentialPath string
+	PaywayMerchantID       string
+	PaywayAPIKey           string
+	PaywayAPIUsername      string
+	PaywayBaseURL          string
+	PaywayReturnURL        string
+	PaywayContinueURL      string
+	PaywayCallbackURL      string
 }
 
 func loadConfig() *Config {
@@ -47,12 +55,56 @@ func loadConfig() *Config {
 	firebaseCredPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
 	// Optional: If not set, FCM will be disabled (dummy service)
 
+	// Payway configuration
+	paywayMerchantID := os.Getenv("PAYWAY_MERCHANT_ID")
+	if paywayMerchantID == "" {
+		paywayMerchantID = "your_merchant_id" // Replace with actual merchant ID
+	}
+
+	paywayAPIKey := os.Getenv("PAYWAY_API_KEY")
+	if paywayAPIKey == "" {
+		paywayAPIKey = "your_api_key" // Replace with actual API key
+	}
+
+	paywayAPIUsername := os.Getenv("PAYWAY_API_USERNAME")
+	if paywayAPIUsername == "" {
+		paywayAPIUsername = "your_api_username" // Replace with actual username
+	}
+
+	paywayBaseURL := os.Getenv("PAYWAY_BASE_URL")
+	if paywayBaseURL == "" {
+		// Use sandbox by default
+		paywayBaseURL = "https://api-sandbox.payway.com.kh"
+	}
+
+	paywayReturnURL := os.Getenv("PAYWAY_RETURN_URL")
+	if paywayReturnURL == "" {
+		paywayReturnURL = "http://localhost:3000/donation/complete" // Frontend URL
+	}
+
+	paywayContinueURL := os.Getenv("PAYWAY_CONTINUE_URL")
+	if paywayContinueURL == "" {
+		paywayContinueURL = "http://localhost:3000/donation/success" // Frontend URL
+	}
+
+	paywayCallbackURL := os.Getenv("PAYWAY_CALLBACK_URL")
+	if paywayCallbackURL == "" {
+		paywayCallbackURL = "http://localhost:8080/webhooks/payway" // Backend webhook URL
+	}
+
 	return &Config{
 		Port:                   port,
 		PostgresURL:            pg,
 		SecretKey:              secret,
 		GoogleClientID:         googleClientID,
 		FirebaseCredentialPath: firebaseCredPath,
+		PaywayMerchantID:       paywayMerchantID,
+		PaywayAPIKey:           paywayAPIKey,
+		PaywayAPIUsername:      paywayAPIUsername,
+		PaywayBaseURL:          paywayBaseURL,
+		PaywayReturnURL:        paywayReturnURL,
+		PaywayContinueURL:      paywayContinueURL,
+		PaywayCallbackURL:      paywayCallbackURL,
 	}
 }
 
@@ -86,12 +138,28 @@ func main() {
 	settingRepo := persistence.NewSettingRepository(db)
 	notificationRepo := persistence.NewNotificationRepository(db)
 	deviceTokenRepo := persistence.NewDeviceTokenRepository(db)
+	donationRepo := persistence.NewDonationRepository(db)
+	supporterRepo := persistence.NewSupporterRepository(db)
+	churchRepo := persistence.NewChurchRepository(db)
 
 	// Initialize Firebase Cloud Messaging service
 	fcmService, err := firebase.NewFCMService(config.FirebaseCredentialPath, deviceTokenRepo)
 	if err != nil {
 		log.Fatalf("❌ Failed to initialize FCM service: %v", err)
 	}
+
+	// Initialize Payway service
+	paywayConfig := &payment.PaywayConfig{
+		MerchantID:   config.PaywayMerchantID,
+		APIKey:       config.PaywayAPIKey,
+		APIUsername:  config.PaywayAPIUsername,
+		BaseURL:      config.PaywayBaseURL,
+		ReturnURL:    config.PaywayReturnURL,
+		ContinueURL:  config.PaywayContinueURL,
+		CallbackURL:  config.PaywayCallbackURL,
+	}
+	paywayService := payment.NewPaywayService(paywayConfig)
+	log.Println("✅ Payway service initialized")
 
 	// Initialize use cases (Application layer)
 	authUseCase := usecase.NewAuthUseCase(userRepo, config.SecretKey, config.GoogleClientID)
@@ -102,6 +170,9 @@ func main() {
 	bandUseCase := usecase.NewBandUseCase(bandRepo, musicRepo)
 	settingUseCase := usecase.NewSettingUseCase(settingRepo)
 	notificationUseCase := usecase.NewNotificationUseCase(notificationRepo, fcmService)
+	donationUseCase := usecase.NewDonationUseCase(donationRepo, userRepo, eventRepo, paywayService)
+	supporterUseCase := usecase.NewSupporterUseCase(supporterRepo, donationRepo)
+	churchUseCase := usecase.NewChurchUseCase(churchRepo, userRepo)
 
 	// Initialize handlers (Interface layer)
 	authHandler := handler.NewAuthHandler(authUseCase)
@@ -113,9 +184,12 @@ func main() {
 	settingHandler := handler.NewSettingHandler(settingUseCase)
 	notificationHandler := handler.NewNotificationHandler(notificationUseCase)
 	deviceTokenHandler := handler.NewDeviceTokenHandler(deviceTokenRepo)
+	donationHandler := handler.NewDonationHandler(donationUseCase)
+	supporterHandler := handler.NewSupporterHandler(supporterUseCase)
+	churchHandler := handler.NewChurchHandler(churchUseCase)
 
 	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, notificationHandler, deviceTokenHandler, authUseCase)
+	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, notificationHandler, deviceTokenHandler, donationHandler, supporterHandler, churchHandler, authUseCase)
 	engine := r.Setup()
 
 	// Start server

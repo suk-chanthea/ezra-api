@@ -2,6 +2,8 @@
 -- 1. Drop triggers
 -- ============================
 
+DROP TRIGGER IF EXISTS update_supporters_updated_at ON supporters;
+DROP TRIGGER IF EXISTS update_donations_updated_at ON donations;
 DROP TRIGGER IF EXISTS update_device_tokens_updated_at ON device_tokens;
 DROP TRIGGER IF EXISTS update_notifications_updated_at ON notifications;
 DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
@@ -15,20 +17,35 @@ DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 DROP TRIGGER IF EXISTS create_settings_for_new_user ON users;
 DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
 DROP TRIGGER IF EXISTS update_bands_updated_at ON bands;
+DROP TRIGGER IF EXISTS update_churches_updated_at ON churches;
 
 -- ============================
--- 2. Drop foreign key from users to bands
+-- 2. Drop foreign keys and columns from users
 -- ============================
 
--- Must drop the constraint before dropping bands table
+-- Must drop the constraints before dropping related tables
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_church_id;
 
--- Drop the band_id column
+-- Drop the columns
 ALTER TABLE users DROP COLUMN IF EXISTS band_id;
+ALTER TABLE users DROP COLUMN IF EXISTS church_id;
+ALTER TABLE users DROP COLUMN IF EXISTS church_status;
+ALTER TABLE users DROP COLUMN IF EXISTS birthday;
+ALTER TABLE users DROP COLUMN IF EXISTS bio;
 
 -- ============================
 -- 3. Drop tables in reverse dependency order
 -- ============================
+
+-- Drop donations (depends on users, events, and supporters)
+DROP TABLE IF EXISTS donations CASCADE;
+
+-- Drop supporters (depends on users)
+DROP TABLE IF EXISTS supporters CASCADE;
+
+-- Drop churches (no dependencies, but users reference it)
+DROP TABLE IF EXISTS churches CASCADE;
 
 -- Drop device tokens (depends on users)
 DROP TABLE IF EXISTS device_tokens CASCADE;
@@ -78,6 +95,23 @@ DROP TABLE IF EXISTS roles CASCADE;
 -- ============================
 -- 4. Drop indexes (optional, mostly handled by DROP TABLE)
 -- ============================
+
+-- Supporters indexes
+DROP INDEX IF EXISTS idx_supporters_email;
+DROP INDEX IF EXISTS idx_supporters_user_id;
+DROP INDEX IF EXISTS idx_supporters_type;
+DROP INDEX IF EXISTS idx_supporters_name;
+
+-- Donations indexes
+DROP INDEX IF EXISTS idx_donations_type;
+DROP INDEX IF EXISTS idx_donations_donor_type;
+DROP INDEX IF EXISTS idx_donations_user_id;
+DROP INDEX IF EXISTS idx_donations_supporter_id;
+DROP INDEX IF EXISTS idx_donations_event_id;
+DROP INDEX IF EXISTS idx_donations_status;
+DROP INDEX IF EXISTS idx_donations_created_at;
+DROP INDEX IF EXISTS idx_donations_transaction_id;
+DROP INDEX IF EXISTS idx_donations_qr_expires_at;
 
 -- Notifications indexes
 DROP INDEX IF EXISTS idx_notifications_user_id;
@@ -145,6 +179,15 @@ DROP INDEX IF EXISTS idx_settings_user_id;
 DROP INDEX IF EXISTS idx_users_email;
 DROP INDEX IF EXISTS idx_users_provider_id;
 DROP INDEX IF EXISTS idx_users_band_id;
+DROP INDEX IF EXISTS idx_users_church_id;
+DROP INDEX IF EXISTS idx_users_church_status;
+DROP INDEX IF EXISTS idx_users_birthday;
+
+-- Churches indexes
+DROP INDEX IF EXISTS idx_churches_fullname;
+DROP INDEX IF EXISTS idx_churches_email;
+DROP INDEX IF EXISTS idx_churches_denomination;
+DROP INDEX IF EXISTS idx_churches_owner_id;
 
 -- Roles indexes
 DROP INDEX IF EXISTS idx_roles_name;

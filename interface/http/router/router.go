@@ -18,6 +18,9 @@ type Router struct {
 	settingHandler      *handler.SettingHandler
 	notificationHandler *handler.NotificationHandler
 	deviceTokenHandler  *handler.DeviceTokenHandler
+	donationHandler     *handler.DonationHandler
+	supporterHandler    *handler.SupporterHandler
+	churchHandler       *handler.ChurchHandler
 	authUseCase         usecase.AuthUseCase
 }
 
@@ -31,6 +34,9 @@ func NewRouter(
 	settingHandler *handler.SettingHandler,
 	notificationHandler *handler.NotificationHandler,
 	deviceTokenHandler *handler.DeviceTokenHandler,
+	donationHandler *handler.DonationHandler,
+	supporterHandler *handler.SupporterHandler,
+	churchHandler *handler.ChurchHandler,
 	authUseCase usecase.AuthUseCase,
 ) *Router {
 	return &Router{
@@ -43,6 +49,9 @@ func NewRouter(
 		settingHandler:      settingHandler,
 		notificationHandler: notificationHandler,
 		deviceTokenHandler:  deviceTokenHandler,
+		donationHandler:     donationHandler,
+		supporterHandler:    supporterHandler,
+		churchHandler:       churchHandler,
 		authUseCase:         authUseCase,
 	}
 }
@@ -60,6 +69,33 @@ func (r *Router) Setup() *gin.Engine {
 	router.POST("/register", r.authHandler.Register)
 	router.POST("/login", r.authHandler.Login)
 	router.POST("/auth/google", r.authHandler.GoogleLogin)
+
+	// Public donation routes (companies can donate without auth)
+	router.POST("/donations", r.donationHandler.Create)
+	router.POST("/donations/:id/pay", r.donationHandler.InitiatePayment)
+	router.POST("/donations/:id/regenerate-qr", r.donationHandler.RegenerateQR)
+	router.GET("/donations", r.donationHandler.GetAll)
+	router.GET("/donations/stats", r.donationHandler.GetStats)
+	router.GET("/donations/:id", r.donationHandler.GetByID)
+	router.GET("/donations/:id/status", r.donationHandler.CheckQRStatus)
+	router.GET("/donations/type/:type", r.donationHandler.GetByType)
+	router.GET("/donations/event/:event_id", r.donationHandler.GetByEvent)
+	router.GET("/donations/event/:event_id/stats", r.donationHandler.GetStatsByEvent)
+	
+	// Payway webhook endpoint (public - called by Payway)
+	router.POST("/webhooks/payway", r.donationHandler.HandlePaywayWebhook)
+
+	// Public supporter routes (for viewing supporters)
+	router.GET("/supporters", r.supporterHandler.GetAll)
+	router.GET("/supporters/:id", r.supporterHandler.GetByID)
+	router.GET("/supporters/type/:type", r.supporterHandler.GetByType)
+	router.GET("/supporters/search", r.supporterHandler.GetByEmail)
+
+	// Public church routes (for viewing churches)
+	router.GET("/churches", r.churchHandler.GetAll)
+	router.GET("/churches/:id", r.churchHandler.GetByID)
+	router.GET("/churches/:id/members", r.churchHandler.GetMembers) // Get approved members
+	router.GET("/churches/denomination/:denomination", r.churchHandler.GetByDenomination)
 
 	// Protected API group (authentication required)
 	api := router.Group("/api")
@@ -164,6 +200,36 @@ func (r *Router) Setup() *gin.Engine {
 			deviceTokens.POST("/register", r.deviceTokenHandler.RegisterToken)     // Register FCM token
 			deviceTokens.POST("/unregister", r.deviceTokenHandler.UnregisterToken) // Unregister FCM token
 			deviceTokens.DELETE("/clear", r.deviceTokenHandler.DeleteAllTokens)    // Clear all tokens
+		}
+
+		// Protected Donation routes (require authentication)
+		donations := api.Group("/donations")
+		{
+			donations.GET("/user", r.donationHandler.GetByUser)
+			donations.PUT("/:id/status", r.donationHandler.UpdateStatus)
+			donations.DELETE("/:id", r.donationHandler.Delete)
+		}
+
+		// Protected Supporter routes (require authentication)
+		supporters := api.Group("/supporters")
+		{
+			supporters.POST("/", r.supporterHandler.Create)
+			supporters.GET("/user", r.supporterHandler.GetByUser)
+			supporters.GET("/:id/stats", r.supporterHandler.GetStats)
+			supporters.PUT("/:id", r.supporterHandler.Update)
+			supporters.DELETE("/:id", r.supporterHandler.Delete)
+		}
+
+		// Protected Church routes (require authentication)
+		churches := api.Group("/churches")
+		{
+			churches.POST("/", r.churchHandler.Create)              // Create church (user becomes owner)
+			churches.PUT("/:id", r.churchHandler.Update)            // Update church (owner only)
+			churches.DELETE("/:id", r.churchHandler.Delete)         // Delete church (owner only)
+			churches.POST("/join", r.churchHandler.JoinChurch)      // Request to join a church
+			churches.POST("/leave", r.churchHandler.LeaveChurch)    // Leave current church
+			churches.GET("/:id/pending", r.churchHandler.GetPendingMembers) // Get pending members (owner only)
+			churches.POST("/:id/approve", r.churchHandler.ApproveMember)    // Approve/reject member (owner only)
 		}
 	}
 

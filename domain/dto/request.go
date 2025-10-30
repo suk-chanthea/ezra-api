@@ -137,3 +137,97 @@ type CreateNotificationRequest struct {
 	RelatedType string `json:"related_type" binding:"omitempty,oneof=music event booking band"`
 	RelatedID   *uint  `json:"related_id"`
 }
+
+// CreateDonationRequest represents donation creation input
+type CreateDonationRequest struct {
+	Type           string  `json:"type" binding:"required,oneof=donate sponsor"`
+	DonorType      string  `json:"donor_type" binding:"required,oneof=user company organization church"`
+	CompanyName    string  `json:"company_name"`  // Required if donor_type=company, organization, or church
+	CompanyEmail   string  `json:"company_email"` // Required if donor_type=company, organization, or church
+	CompanyPhone   string  `json:"company_phone"`
+	Amount         float64 `json:"amount" binding:"required,gt=0"`
+	Currency       string  `json:"currency" binding:"required,oneof=USD KHR"`
+	Message        string  `json:"message"`
+	EventID        *uint   `json:"event_id"` // Optional: If provided, donation is for joining this event. If null, donation is for the app
+	InitiatePayment bool   `json:"initiate_payment"` // If true, returns payment info (QR for donate, Visa for sponsor) immediately
+}
+
+// UpdateDonationStatusRequest represents donation status update input
+type UpdateDonationStatusRequest struct {
+	Status        string `json:"status" binding:"required,oneof=pending completed failed refunded"`
+	TransactionID string `json:"transaction_id"`
+	PaymentMethod string `json:"payment_method"`
+}
+
+// DonationFilterRequest represents donation filter parameters
+type DonationFilterRequest struct {
+	Type      string `form:"type" binding:"omitempty,oneof=donate sponsor"`
+	DonorType string `form:"donor_type" binding:"omitempty,oneof=user company organization church"`
+	Status    string `form:"status" binding:"omitempty,oneof=pending completed failed refunded"`
+	EventID   *uint  `form:"event_id"`
+	PaginationRequest
+}
+
+// CreateSupporterRequest represents supporter creation input
+type CreateSupporterRequest struct {
+	Name        string `json:"name" binding:"required,min=1,max=255"`
+	Email       string `json:"email" binding:"required,email,max=255"`
+	Phone       string `json:"phone" binding:"omitempty,max=50"`
+	Type        string `json:"type" binding:"required,oneof=company organization church"`
+	Website     string `json:"website" binding:"omitempty,max=255"`
+	Address     string `json:"address"`
+	Logo        string `json:"logo" binding:"omitempty,max=255"`
+	Description string `json:"description"`
+	SupporterID *uint  `json:"supporter_id"` // Optional: For linking donation to existing supporter
+}
+
+// UpdateSupporterRequest represents supporter update input
+type UpdateSupporterRequest struct {
+	Name        string `json:"name" binding:"required,min=1,max=255"`
+	Email       string `json:"email" binding:"required,email,max=255"`
+	Phone       string `json:"phone" binding:"omitempty,max=50"`
+	Type        string `json:"type" binding:"required,oneof=company organization church"`
+	Website     string `json:"website" binding:"omitempty,max=255"`
+	Address     string `json:"address"`
+	Logo        string `json:"logo" binding:"omitempty,max=255"`
+	Description string `json:"description"`
+}
+
+// CreateChurchRequest represents church creation input
+type CreateChurchRequest struct {
+	Fullname        string `json:"fullname" binding:"required,min=1,max=255"`
+	Address         string `json:"address"`
+	Phone           string `json:"phone" binding:"omitempty,max=50"`
+	Email           string `json:"email" binding:"omitempty,email,max=255"`
+	Website         string `json:"website" binding:"omitempty,max=255"`
+	PastorName      string `json:"pastor_name" binding:"omitempty,max=255"`
+	Description     string `json:"description"`
+	Logo            string `json:"logo" binding:"omitempty,max=255"`
+	EstablishedDate string `json:"established_date"` // Format: YYYY-MM-DD
+	Denomination    string `json:"denomination" binding:"omitempty,max=100"`
+}
+
+// JoinChurchRequest represents user request to join a church
+type JoinChurchRequest struct {
+	ChurchID uint `json:"church_id" binding:"required"`
+}
+
+// ApproveChurchMemberRequest represents approval/rejection of church membership
+type ApproveChurchMemberRequest struct {
+	UserID uint   `json:"user_id" binding:"required"`
+	Status string `json:"status" binding:"required,oneof=approved rejected"`
+}
+
+// UpdateChurchRequest represents church update input
+type UpdateChurchRequest struct {
+	Fullname        string `json:"fullname" binding:"required,min=1,max=255"`
+	Address         string `json:"address"`
+	Phone           string `json:"phone" binding:"omitempty,max=50"`
+	Email           string `json:"email" binding:"omitempty,email,max=255"`
+	Website         string `json:"website" binding:"omitempty,max=255"`
+	PastorName      string `json:"pastor_name" binding:"omitempty,max=255"`
+	Description     string `json:"description"`
+	Logo            string `json:"logo" binding:"omitempty,max=255"`
+	EstablishedDate string `json:"established_date"` // Format: YYYY-MM-DD
+	Denomination    string `json:"denomination" binding:"omitempty,max=100"`
+}

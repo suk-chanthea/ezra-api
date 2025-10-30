@@ -17,6 +17,9 @@ Development: http://localhost:8080
 - [Bookings](#bookings)
 - [Favorites](#favorites)
 - [Bands](#bands)
+- [Donations](#donations)
+- [Supporters](#supporters)
+- [Churches](#churches)
 - [Settings](#settings)
 - [Notifications](#notifications)
 - [Health Check](#health-check)
@@ -1124,6 +1127,1188 @@ Retrieve all users who are members of a specific band.
 
 ---
 
+## Donations
+
+Support donations and sponsorships with integrated Payway by ABA payment processing.
+
+### Features
+- **Two donation types**: `donate` (QR payment) and `sponsor` (Card payment)
+- **Two donor types**: `user` (authenticated) and `company` (anonymous)
+- **One-call payment**: Create donation and get payment info immediately
+- **QR code expiration**: 3-minute expiration for security
+- **Event linking**: Donations can support app or specific events
+- **Payment tracking**: Full transaction history and status
+- **Statistics**: Comprehensive donation analytics
+
+---
+
+### Create Donation (One-Step Payment)
+Create a donation and optionally get payment info immediately.
+
+**Endpoint:** `POST /donations`  
+**Authentication:** Optional (Required for user donations, public for company donations)
+
+**Request Body (User Donation with QR Payment):**
+```json
+{
+  "type": "donate",
+  "donor_type": "user",
+  "amount": 50.00,
+  "currency": "USD",
+  "message": "Happy to support!",
+  "event_id": 5,
+  "initiate_payment": true
+}
+```
+
+**Request Body (Company Sponsorship with Card Payment):**
+```json
+{
+  "type": "sponsor",
+  "donor_type": "company",
+  "company_name": "Tech Solutions Ltd",
+  "company_email": "sponsor@techsolutions.com",
+  "company_phone": "+855123456789",
+  "amount": 5000.00,
+  "currency": "USD",
+  "message": "Proud to sponsor this event!",
+  "event_id": 5,
+  "initiate_payment": true
+}
+```
+
+**Request Body (Using Supporter Profile):**
+```json
+{
+  "type": "sponsor",
+  "donor_type": "company",
+  "supporter_id": 1,
+  "amount": 5000.00,
+  "currency": "USD",
+  "message": "Proud to sponsor this event!",
+  "event_id": 5,
+  "initiate_payment": true
+}
+```
+
+**Validation Rules:**
+- `type`: required, `donate` or `sponsor`
+- `donor_type`: required, `user`, `company`, `organization`, or `church`
+- `amount`: required, must be > 0
+- `currency`: required, `USD` or `KHR`
+- `message`: optional, text
+- `event_id`: optional, links donation to specific event (null = app support)
+- `initiate_payment`: optional, boolean (if true, returns payment info immediately)
+- `supporter_id`: optional, use existing supporter profile instead of inline info
+- `company_name`: required if no `supporter_id` and `donor_type != user`
+- `company_email`: required if no `supporter_id` and `donor_type != user`
+- `company_phone`: optional
+
+**Success Response (201) - QR Payment:**
+```json
+{
+  "message": "donation created successfully. Please scan the QR code to complete payment",
+  "data": {
+    "id": 123,
+    "type": "donate",
+    "donor_type": "user",
+    "amount": 50.00,
+    "currency": "USD",
+    "message": "Happy to support!",
+    "status": "pending",
+    "event_id": 5,
+    "created_at": "2024-01-15T10:30:00Z",
+    "payment_info": {
+      "donation_id": 123,
+      "transaction_id": "DON-123-1705318200",
+      "qr_code": "data:image/png;base64,iVBORw0KGgoAAAA...",
+      "payment_method": "qr",
+      "expires_at": "2024-01-15T10:33:00Z",
+      "expires_in_seconds": 180,
+      "amount": "5000",
+      "currency": "USD"
+    }
+  }
+}
+```
+
+**Success Response (201) - Card Payment:**
+```json
+{
+  "message": "donation created successfully. Please complete payment via the provided URL",
+  "data": {
+    "id": 124,
+    "type": "sponsor",
+    "donor_type": "company",
+    "company_name": "Tech Solutions Ltd",
+    "amount": 5000.00,
+    "currency": "USD",
+    "status": "pending",
+    "event_id": 5,
+    "created_at": "2024-01-15T10:30:00Z",
+    "payment_info": {
+      "donation_id": 124,
+      "transaction_id": "DON-124-1705318300",
+      "payment_url": "https://checkout.payway.com.kh/payment/abc123...",
+      "payment_method": "card",
+      "amount": "500000",
+      "currency": "USD"
+    }
+  }
+}
+```
+
+**Payment Methods by Type:**
+- `donate` → QR Code payment (KHQR via ABA/Wing/Bakong)
+- `sponsor` → Visa/Mastercard payment (redirects to Payway)
+
+**Error Responses:**
+- **400 Bad Request:** Invalid input or validation error
+- **401 Unauthorized:** User authentication required for user donations
+
+---
+
+### Initiate Payment (Separate Step)
+Generate payment info for an existing donation.
+
+**Endpoint:** `POST /donations/:id/pay`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Donation ID (integer)
+
+**Success Response (200):** Same as payment_info above
+
+**Error Responses:**
+- **400 Bad Request:** Invalid ID or payment already completed
+- **404 Not Found:** Donation not found
+
+---
+
+### Get All Donations
+Retrieve donations with filtering and pagination.
+
+**Endpoint:** `GET /donations`  
+**Authentication:** None (Public)
+
+**Query Parameters:**
+- `page` (optional, default: 1)
+- `page_size` (optional, default: 20, max: 100)
+- `type` (optional) - Filter by: `donate` or `sponsor`
+- `donor_type` (optional) - Filter by: `user` or `company`
+- `status` (optional) - Filter by: `pending`, `completed`, `failed`, `refunded`
+- `event_id` (optional) - Filter by event ID
+
+**Examples:**
+- All donations: `GET /donations`
+- Company sponsors: `GET /donations?donor_type=company&type=sponsor`
+- Event donations: `GET /donations?event_id=5`
+- Completed only: `GET /donations?status=completed`
+
+**Success Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 123,
+      "type": "donate",
+      "donor_type": "user",
+      "user_id": 5,
+      "amount": 50.00,
+      "currency": "USD",
+      "message": "Happy to support!",
+      "status": "completed",
+      "transaction_id": "DON-123-1705318200",
+      "payment_method": "khqr",
+      "event_id": 5,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:32:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "page_size": 20,
+    "total_pages": 5,
+    "total_records": 95,
+    "has_next_page": true,
+    "has_prev_page": false
+  }
+}
+```
+
+---
+
+### Get Donation by ID
+Retrieve a specific donation with full details.
+
+**Endpoint:** `GET /donations/:id`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Donation ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "id": 123,
+  "type": "donate",
+  "donor_type": "user",
+  "user_id": 5,
+  "user": {
+    "id": 5,
+    "username": "johndoe",
+    "fullname": "John Doe",
+    "email": "john@example.com"
+  },
+  "amount": 50.00,
+  "currency": "USD",
+  "message": "Happy to support!",
+  "status": "completed",
+  "transaction_id": "DON-123-1705318200",
+  "payment_method": "khqr",
+  "event_id": 5,
+  "event": {
+    "id": 5,
+    "title": "Charity Concert 2024",
+    "location": "Phnom Penh"
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:32:00Z"
+}
+```
+
+**Error Responses:**
+- **404 Not Found:** Donation not found
+
+---
+
+### Get Donations by Type
+Retrieve donations filtered by type.
+
+**Endpoint:** `GET /donations/type/:type`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `type` (required) - `donate` or `sponsor`
+
+**Query Parameters:**
+- `limit` (optional, default: 20)
+- `offset` (optional, default: 0)
+
+---
+
+### Get Donations by Event
+Retrieve all donations for a specific event.
+
+**Endpoint:** `GET /donations/event/:event_id`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `event_id` (required) - Event ID (integer)
+
+**Query Parameters:**
+- `limit` (optional, default: 20)
+- `offset` (optional, default: 0)
+
+**Success Response (200):** Returns list of donations for the event
+
+---
+
+### Get User's Donations
+Retrieve donations made by the authenticated user.
+
+**Endpoint:** `GET /api/donations/user`  
+**Authentication:** Required (Bearer Token)
+
+**Query Parameters:**
+- `limit` (optional, default: 20)
+- `offset` (optional, default: 0)
+
+**Success Response (200):** Returns list of user's donations
+
+---
+
+### Get Donation Statistics
+Get overall donation statistics.
+
+**Endpoint:** `GET /donations/stats`  
+**Authentication:** None (Public)
+
+**Success Response (200):**
+```json
+{
+  "total_amount": 15000.00,
+  "total_donations": 45,
+  "total_sponsors": 12,
+  "donate_amount": 8000.00,
+  "sponsor_amount": 7000.00,
+  "user_donations": 38,
+  "company_donations": 19
+}
+```
+
+---
+
+### Get Event Donation Statistics
+Get donation statistics for a specific event.
+
+**Endpoint:** `GET /donations/event/:event_id/stats`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `event_id` (required) - Event ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "total_amount": 7550.00,
+  "total_donations": 15,
+  "total_sponsors": 3,
+  "donate_amount": 375.00,
+  "sponsor_amount": 7175.00,
+  "user_donations": 12,
+  "company_donations": 6
+}
+```
+
+---
+
+### Check QR Status
+Check if QR code is still valid and payment status.
+
+**Endpoint:** `GET /donations/:id/status`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Donation ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "donation_id": 123,
+  "status": "pending",
+  "expired": false
+}
+```
+
+**Note:** Frontend should poll this endpoint to detect payment completion.
+
+---
+
+### Regenerate QR Code
+Generate a new QR code if the previous one expired.
+
+**Endpoint:** `POST /donations/:id/regenerate-qr`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Donation ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "message": "QR code regenerated successfully",
+  "data": {
+    "qr_code": "data:image/png;base64,NEW_QR...",
+    "expires_at": "2024-01-15T10:36:00Z",
+    "expires_in_seconds": 180
+  }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Not a QR payment or already completed
+
+---
+
+### Update Donation Status
+Update payment status (typically called by payment webhook).
+
+**Endpoint:** `PUT /api/donations/:id/status`  
+**Authentication:** Required (Bearer Token)
+
+**Path Parameters:**
+- `id` (required) - Donation ID (integer)
+
+**Request Body:**
+```json
+{
+  "status": "completed",
+  "transaction_id": "PAYWAY_TXN_123456",
+  "payment_method": "aba_pay"
+}
+```
+
+**Valid Status Values:**
+- `pending` - Payment not yet processed
+- `completed` - Payment successful
+- `failed` - Payment failed
+- `refunded` - Payment was refunded
+
+**Success Response (200):**
+```json
+{
+  "message": "donation status updated successfully"
+}
+```
+
+---
+
+### Delete Donation
+Delete a pending donation (only owner can delete).
+
+**Endpoint:** `DELETE /api/donations/:id`  
+**Authentication:** Required (Bearer Token, must be owner)
+
+**Path Parameters:**
+- `id` (required) - Donation ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "message": "donation deleted successfully"
+}
+```
+
+**Error Responses:**
+- **401 Unauthorized:** User not authenticated
+- **400 Bad Request:** Cannot delete completed donations
+
+---
+
+### Payway Webhook (Internal)
+Webhook endpoint for Payway payment callbacks.
+
+**Endpoint:** `POST /webhooks/payway`  
+**Authentication:** None (Called by Payway)
+
+**Request Body:**
+```json
+{
+  "tran_id": "DON-123-1705318200",
+  "status": "success",
+  "approval_code": "123456",
+  "payment_option": "khqr",
+  "hash": "base64_signature"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "webhook processed successfully"
+}
+```
+
+**Note:** This endpoint is automatically called by Payway when payment is completed. It updates the donation status to `completed` or `failed` based on payment result.
+
+---
+
+### Donation Use Cases
+
+#### Use Case 1: General App Support
+Donate to support the app (no event_id)
+
+```json
+{
+  "type": "donate",
+  "donor_type": "user",
+  "amount": 10.00,
+  "currency": "USD",
+  "initiate_payment": true
+}
+```
+
+#### Use Case 2: Event Participation
+Pay to join a specific event (with event_id)
+
+```json
+{
+  "type": "donate",
+  "donor_type": "user",
+  "amount": 25.00,
+  "currency": "USD",
+  "event_id": 5,
+  "initiate_payment": true
+}
+```
+
+#### Use Case 3: Company Event Sponsorship
+Company sponsors an event with card payment
+
+```json
+{
+  "type": "sponsor",
+  "donor_type": "company",
+  "company_name": "Global Bank",
+  "company_email": "events@globalbank.com",
+  "amount": 5000.00,
+  "currency": "USD",
+  "event_id": 5,
+  "initiate_payment": true
+}
+```
+
+---
+
+## Supporters
+
+Manage company, organization, and church donor profiles with normalized information and donation tracking.
+
+### Features
+- **Three supporter types**: `company`, `organization`, and `church`
+- Linked to user accounts for management
+- Normalized donor information (eliminates duplicate company data)
+- Automatic donation statistics (total donations, total amount)
+- Can be used when creating donations instead of inline company info
+
+---
+
+### Create Supporter
+Create a new supporter profile (company, organization, or church).
+
+**Endpoint:** `POST /api/supporters`  
+**Authentication:** Required (Bearer Token)
+
+**Request Body:**
+```json
+{
+  "name": "Tech Solutions Ltd",
+  "email": "contact@techsolutions.com",
+  "phone": "+855123456789",
+  "type": "company",
+  "website": "https://techsolutions.com",
+  "address": "123 Business St, Phnom Penh",
+  "logo": "https://techsolutions.com/logo.png",
+  "description": "Leading IT solutions provider in Cambodia"
+}
+```
+
+**Validation Rules:**
+- `name`: required, min 1 char, max 255 chars
+- `email`: required, valid email, max 255 chars, unique
+- `phone`: optional, max 50 chars
+- `type`: required, `company`, `organization`, or `church`
+- `website`: optional, max 255 chars
+- `address`: optional, text
+- `logo`: optional, max 255 chars (URL)
+- `description`: optional, text
+
+**Success Response (201):**
+```json
+{
+  "message": "supporter created successfully",
+  "data": {
+    "id": 1,
+    "name": "Tech Solutions Ltd",
+    "email": "contact@techsolutions.com",
+    "phone": "+855123456789",
+    "type": "company",
+    "website": "https://techsolutions.com",
+    "address": "123 Business St, Phnom Penh",
+    "logo": "https://techsolutions.com/logo.png",
+    "description": "Leading IT solutions provider in Cambodia",
+    "user_id": 5,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+---
+
+### Get All Supporters
+Retrieve all supporters with pagination.
+
+**Endpoint:** `GET /supporters`  
+**Authentication:** None (Public)
+
+**Query Parameters:**
+- `page` (optional, default: 1)
+- `page_size` (optional, default: 20, max: 100)
+
+**Success Response (200):** Returns paginated list of supporters
+
+---
+
+### Get Supporter by ID
+Retrieve a specific supporter's details.
+
+**Endpoint:** `GET /supporters/:id`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Supporter ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Tech Solutions Ltd",
+  "email": "contact@techsolutions.com",
+  "phone": "+855123456789",
+  "type": "company",
+  "website": "https://techsolutions.com",
+  "address": "123 Business St, Phnom Penh",
+  "logo": "https://techsolutions.com/logo.png",
+  "description": "Leading IT solutions provider",
+  "user_id": 5,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+### Get Supporters by Type
+Filter supporters by type (company, organization, or church).
+
+**Endpoint:** `GET /supporters/type/:type`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `type` (required) - `company`, `organization`, or `church`
+
+**Query Parameters:**
+- `page` (optional)
+- `page_size` (optional)
+
+---
+
+### Get User's Supporters
+Retrieve supporters managed by the authenticated user.
+
+**Endpoint:** `GET /api/supporters/user`  
+**Authentication:** Required (Bearer Token)
+
+**Query Parameters:**
+- `page` (optional)
+- `page_size` (optional)
+
+---
+
+### Get Supporter Stats
+Get donation statistics for a specific supporter.
+
+**Endpoint:** `GET /api/supporters/:id/stats`  
+**Authentication:** Required (Bearer Token)
+
+**Path Parameters:**
+- `id` (required) - Supporter ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Tech Solutions Ltd",
+  "email": "contact@techsolutions.com",
+  "type": "company",
+  "total_donations": 15,
+  "total_amount": 75000.00,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+### Search Supporters by Email
+Search for supporters by email address.
+
+**Endpoint:** `GET /supporters/search?email=contact@techsolutions.com`  
+**Authentication:** None (Public)
+
+**Query Parameters:**
+- `email` (required) - Email address to search
+
+---
+
+### Update Supporter
+Update supporter information. Only the managing user can update.
+
+**Endpoint:** `PUT /api/supporters/:id`  
+**Authentication:** Required (Bearer Token, must be manager)
+
+**Path Parameters:**
+- `id` (required) - Supporter ID (integer)
+
+**Request Body:** Same format as Create Supporter
+
+**Success Response (200):**
+```json
+{
+  "message": "supporter updated successfully",
+  "data": { /* updated supporter */ }
+}
+```
+
+---
+
+### Delete Supporter
+Delete a supporter profile. Only the managing user can delete.
+
+**Endpoint:** `DELETE /api/supporters/:id`  
+**Authentication:** Required (Bearer Token, must be manager)
+
+**Path Parameters:**
+- `id` (required) - Supporter ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "message": "supporter deleted successfully"
+}
+```
+
+---
+
+## Churches
+
+Manage church profiles with member approval system. Users can join churches and church owners can approve/reject membership requests.
+
+### Features
+- **Church Profiles**: Complete information including pastor, denomination, established date
+- **Ownership System**: Creator becomes church owner automatically
+- **Membership Approval**: Pending → Approved/Rejected workflow
+- **Member Management**: View approved members and pending requests
+- **User Relationship**: Each user can belong to one church
+
+---
+
+### Create Church
+Create a new church profile (user becomes owner).
+
+**Endpoint:** `POST /api/churches`  
+**Authentication:** Required (Bearer Token)
+
+**Request Body:**
+```json
+{
+  "fullname": "Grace Baptist Church",
+  "address": "456 Church Ave, Phnom Penh",
+  "phone": "+855987654321",
+  "email": "contact@gracebaptist.org",
+  "website": "https://gracebaptist.org",
+  "pastor_name": "Rev. John Smith",
+  "description": "A vibrant community church committed to worship and service",
+  "logo": "https://gracebaptist.org/logo.png",
+  "established_date": "1990-05-15",
+  "denomination": "Baptist"
+}
+```
+
+**Validation Rules:**
+- `fullname`: required, min 1 char, max 255 chars, unique
+- `address`: optional, text
+- `phone`: optional, max 50 chars
+- `email`: optional, valid email, max 255 chars
+- `website`: optional, max 255 chars
+- `pastor_name`: optional, max 255 chars
+- `description`: optional, text
+- `logo`: optional, max 255 chars (URL)
+- `established_date`: optional, format: YYYY-MM-DD
+- `denomination`: optional, max 100 chars
+
+**Success Response (201):**
+```json
+{
+  "message": "church created successfully",
+  "data": {
+    "id": 1,
+    "fullname": "Grace Baptist Church",
+    "address": "456 Church Ave, Phnom Penh",
+    "phone": "+855987654321",
+    "email": "contact@gracebaptist.org",
+    "website": "https://gracebaptist.org",
+    "pastor_name": "Rev. John Smith",
+    "description": "A vibrant community church",
+    "logo": "https://gracebaptist.org/logo.png",
+    "established_date": "1990-05-15T00:00:00Z",
+    "denomination": "Baptist",
+    "owner_id": 5,
+    "member_count": 0,
+    "pending_count": 0,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+---
+
+### Get All Churches
+Retrieve all churches with pagination.
+
+**Endpoint:** `GET /churches`  
+**Authentication:** None (Public)
+
+**Query Parameters:**
+- `page` (optional, default: 1)
+- `page_size` (optional, default: 20, max: 100)
+
+**Success Response (200):** Returns paginated list of churches
+
+---
+
+### Get Church by ID
+Retrieve a specific church's details including member counts.
+
+**Endpoint:** `GET /churches/:id`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Church ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "fullname": "Grace Baptist Church",
+  "address": "456 Church Ave, Phnom Penh",
+  "phone": "+855987654321",
+  "email": "contact@gracebaptist.org",
+  "website": "https://gracebaptist.org",
+  "pastor_name": "Rev. John Smith",
+  "description": "A vibrant community church",
+  "logo": "https://gracebaptist.org/logo.png",
+  "established_date": "1990-05-15T00:00:00Z",
+  "denomination": "Baptist",
+  "owner_id": 5,
+  "owner": {
+    "id": 5,
+    "username": "johndoe",
+    "fullname": "John Doe",
+    "email": "john@example.com"
+  },
+  "member_count": 25,
+  "pending_count": 3,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+### Get Churches by Denomination
+Filter churches by denomination.
+
+**Endpoint:** `GET /churches/denomination/:denomination`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `denomination` (required) - Denomination name (e.g., Baptist, Catholic, Presbyterian)
+
+**Query Parameters:**
+- `page` (optional)
+- `page_size` (optional)
+
+**Success Response (200):** Returns paginated list of churches matching denomination
+
+---
+
+### Get Church Members
+Retrieve approved members of a church.
+
+**Endpoint:** `GET /churches/:id/members`  
+**Authentication:** None (Public)
+
+**Path Parameters:**
+- `id` (required) - Church ID (integer)
+
+**Query Parameters:**
+- `page` (optional)
+- `page_size` (optional)
+
+**Success Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "username": "janedoe",
+      "fullname": "Jane Doe",
+      "email": "jane@example.com",
+      "profile": "https://example.com/profiles/jane.jpg",
+      "church_id": 1,
+      "church_status": "approved",
+      "created_at": "2024-01-10T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "page_size": 20,
+    "total_pages": 2,
+    "total_records": 25,
+    "has_next_page": true,
+    "has_prev_page": false
+  }
+}
+```
+
+---
+
+### Join Church
+Request to join a church (status: pending, awaits owner approval).
+
+**Endpoint:** `POST /api/churches/join`  
+**Authentication:** Required (Bearer Token)
+
+**Request Body:**
+```json
+{
+  "church_id": 1
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "church join request submitted. Waiting for owner approval"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** User already in a church or church not found
+- **401 Unauthorized:** User not authenticated
+
+**Notes:**
+- User can only be in one church at a time
+- Must leave current church before joining another
+- Join request starts with status "pending"
+
+---
+
+### Leave Church
+Leave your current church.
+
+**Endpoint:** `POST /api/churches/leave`  
+**Authentication:** Required (Bearer Token)
+
+**Success Response (200):**
+```json
+{
+  "message": "left church successfully"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** User not in any church
+
+---
+
+### Get Pending Members (Owner Only)
+View pending membership requests for your church.
+
+**Endpoint:** `GET /api/churches/:id/pending`  
+**Authentication:** Required (Bearer Token, must be owner)
+
+**Path Parameters:**
+- `id` (required) - Church ID (integer)
+
+**Query Parameters:**
+- `page` (optional)
+- `page_size` (optional)
+
+**Success Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 15,
+      "username": "newuser",
+      "fullname": "New User",
+      "email": "newuser@example.com",
+      "church_id": 1,
+      "church_status": "pending",
+      "created_at": "2024-01-20T15:30:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "page_size": 20,
+    "total_pages": 1,
+    "total_records": 3,
+    "has_next_page": false,
+    "has_prev_page": false
+  }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Not church owner or church not found
+
+---
+
+### Approve/Reject Member (Owner Only)
+Approve or reject a pending membership request.
+
+**Endpoint:** `POST /api/churches/:id/approve`  
+**Authentication:** Required (Bearer Token, must be owner)
+
+**Path Parameters:**
+- `id` (required) - Church ID (integer)
+
+**Request Body:**
+```json
+{
+  "user_id": 15,
+  "status": "approved"
+}
+```
+
+**Valid Status Values:**
+- `approved` - Accept the member into the church
+- `rejected` - Reject the membership request (removes church_id)
+
+**Success Response (200):**
+```json
+{
+  "message": "member approved successfully"
+}
+```
+
+Or for rejection:
+```json
+{
+  "message": "member rejected successfully"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Not church owner, user not requesting to join, or invalid status
+- **401 Unauthorized:** User not authenticated
+
+---
+
+### Update Church (Owner Only)
+Update church information. Only the owner can update.
+
+**Endpoint:** `PUT /api/churches/:id`  
+**Authentication:** Required (Bearer Token, must be owner)
+
+**Path Parameters:**
+- `id` (required) - Church ID (integer)
+
+**Request Body:** Same format as Create Church
+
+**Success Response (200):**
+```json
+{
+  "message": "church updated successfully",
+  "data": { /* updated church */ }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Not church owner, church not found, or name already exists
+- **401 Unauthorized:** User not authenticated
+
+---
+
+### Delete Church (Owner Only)
+Delete a church. Only the owner can delete.
+
+**Endpoint:** `DELETE /api/churches/:id`  
+**Authentication:** Required (Bearer Token, must be owner)
+
+**Path Parameters:**
+- `id` (required) - Church ID (integer)
+
+**Success Response (200):**
+```json
+{
+  "message": "church deleted successfully"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Not church owner or church not found
+- **401 Unauthorized:** User not authenticated
+
+**Notes:**
+- Deleting a church removes all member associations
+- Members' `church_id` will be set to NULL
+
+---
+
+### Church Membership Workflow
+
+```
+1. User creates church → Becomes owner automatically
+2. Other users request to join → Status: "pending"
+3. Owner views pending requests → GET /api/churches/:id/pending
+4. Owner approves/rejects → POST /api/churches/:id/approve
+5. If approved → User becomes member (status: "approved")
+6. If rejected → User removed from church (church_id = NULL)
+7. User can leave anytime → POST /api/churches/leave
+```
+
+---
+
+### User Church Information
+
+Users have the following church-related fields:
+- `birthday`: User's date of birth (optional)
+- `church_id`: ID of church user belongs to (nullable)
+- `church_status`: `pending`, `approved`, or `rejected`
+- `bio`: User biography/description (optional)
+
+**Example User Response:**
+```json
+{
+  "id": 10,
+  "username": "janedoe",
+  "fullname": "Jane Doe",
+  "email": "jane@example.com",
+  "profile": "https://example.com/profiles/jane.jpg",
+  "birthday": "1990-05-15T00:00:00Z",
+  "church_id": 1,
+  "church": {
+    "id": 1,
+    "fullname": "Grace Baptist Church",
+    "pastor_name": "Rev. John Smith"
+  },
+  "church_status": "approved",
+  "bio": "Music ministry leader and worship coordinator",
+  "created_at": "2024-01-10T10:00:00Z"
+}
+```
+
+---
+
+### Donation Status Flow
+
+```
+pending → completed  (successful payment)
+pending → failed     (failed payment)
+completed → refunded (refunded payment)
+```
+
+---
+
+### Payment Integration Notes
+
+**Payway by ABA Configuration:**
+Required environment variables:
+- `PAYWAY_MERCHANT_ID` - Your Payway merchant ID
+- `PAYWAY_API_KEY` - Your Payway API key
+- `PAYWAY_API_USERNAME` - Your Payway username
+- `PAYWAY_BASE_URL` - Sandbox or production URL
+- `PAYWAY_RETURN_URL` - Frontend return URL
+- `PAYWAY_CALLBACK_URL` - Backend webhook URL
+
+**QR Code Expiration:**
+- QR codes expire after 3 minutes for security
+- Frontend should show countdown timer
+- Users can regenerate expired QR codes
+- Card payments have no expiration
+
+**Supported Currencies:**
+- `USD` - US Dollar
+- `KHR` - Cambodian Riel
+
+---
+
 ## Device Tokens (FCM Push Notifications)
 
 Firebase Cloud Messaging (FCM) integration for real-time push notifications to mobile apps and web browsers.
@@ -1919,7 +3104,8 @@ Paginated responses include metadata:
 
 ### Tables
 - **roles** - System roles with permissions (JSON)
-- **users** - User accounts with authentication data
+- **users** - User accounts with authentication data (includes birthday, church_id, church_status, bio)
+- **churches** - Church profiles with owner management and member approval system
 - **tokens** - Multi-device token management
 - **settings** - User preferences (auto-created on registration)
 - **musics** - Core music metadata
@@ -1931,7 +3117,10 @@ Paginated responses include metadata:
 - **bands** - Music collections/libraries
 - **band_musics** - Many-to-many: Bands ↔ Music
 - **favorites** - User favorites (Many-to-many: Users ↔ Music)
+- **donations** - Donations and sponsorships with payment tracking
+- **supporters** - Normalized company/organization/church donor profiles
 - **notifications** - User notifications with read tracking
+- **device_tokens** - FCM push notification tokens
 
 ### Automatic Features
 - **Timestamps** - All tables have `created_at` and `updated_at` with auto-update triggers
@@ -1955,6 +3144,18 @@ SECRET=your_jwt_secret_key_here
 
 # OAuth (Optional)
 GOOGLE_CLIENT_ID=your_google_client_id_here
+
+# Payway by ABA (Payment Gateway)
+PAYWAY_MERCHANT_ID=your_merchant_id
+PAYWAY_API_KEY=your_api_key
+PAYWAY_API_USERNAME=your_api_username
+PAYWAY_BASE_URL=https://api-sandbox.payway.com.kh  # or production URL
+PAYWAY_RETURN_URL=http://localhost:3000/donation/complete
+PAYWAY_CONTINUE_URL=http://localhost:3000/donation/success
+PAYWAY_CALLBACK_URL=http://localhost:8080/webhooks/payway
+
+# Firebase (Optional - for push notifications)
+FIREBASE_CREDENTIALS_PATH=/path/to/firebase-adminsdk.json
 
 # Gin Mode
 GIN_MODE=release  # or 'debug' for development
@@ -1985,10 +3186,22 @@ GIN_MODE=release  # or 'debug' for development
 - Device tokens are stored in the `device_tokens` table and support iOS, Android, and Web platforms
 - Push notifications are sent automatically when notifications are created (works in background)
 - Invalid device tokens are automatically cleaned up when FCM reports them
+- Donations support two types: `donate` (QR payment) and `sponsor` (card payment)
+- Donations can be for app support (no event_id) or event participation (with event_id)
+- QR codes expire after 3 minutes for security and can be regenerated
+- Payment integration with Payway by ABA for both QR (KHQR) and card payments
+- Donation statistics available globally and per-event
+- Companies/organizations/churches can donate without authentication or use supporter profiles
+- Users require login for donations
+- Supporters normalize donor information (companies, organizations, churches)
+- Churches have ownership and member approval system
+- Users can join one church at a time with pending/approved/rejected status
+- Church owners can approve/reject membership requests
+- Users have additional fields: birthday, church_id, church_status, bio
 
 ---
 
-**Last Updated:** October 29, 2025  
+**Last Updated:** October 30, 2025  
 **API Version:** 1.0  
 **Database:** PostgreSQL 16  
 **Framework:** Gin (Go)
