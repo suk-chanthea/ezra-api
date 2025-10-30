@@ -11,6 +11,7 @@ Development: http://localhost:8080
 ## Table of Contents  
 - [Device Tokens (FCM Push Notifications)](#device-tokens-fcm-push-notifications)
 - [Authentication](#authentication)
+- [OTP Verification](#otp-verification)
 - [User Management](#user-management)
 - [Music](#music)
 - [Events](#events)
@@ -142,6 +143,381 @@ Authenticate using Google OAuth ID token.
 ```
 
 **Note:** This endpoint validates the Google ID token, extracts user information (sub, email, name, picture), and either creates a new user or logs in an existing user linked to that Google account.
+
+---
+
+## OTP Verification
+
+The system uses One-Time Password (OTP) verification for email verification, password reset, and optional two-factor authentication (2FA). OTPs are sent via Gmail SMTP and expire after 10 minutes (configurable).
+
+### Send OTP
+Generate and send an OTP code to the specified email address.
+
+**Endpoint:** `POST /otp/send`  
+**Authentication:** None (Public)
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "purpose": "email_verification"
+}
+```
+
+**Purpose Options:**
+- `email_verification` - Verify email before user registration
+- `password_reset` - Reset forgotten password
+- `login` - Two-factor authentication (2FA) for login
+
+**Validation Rules:**
+- `email`: required, valid email format
+- `purpose`: required, must be one of the allowed purposes
+
+**Success Response (200):**
+```json
+{
+  "message": "OTP sent successfully to your email",
+  "email": "user@example.com",
+  "expires_at": "2025-10-30T10:45:00Z"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Invalid email format
+```json
+{
+  "error": "invalid email format"
+}
+```
+
+- **400 Bad Request:** Email already registered (for `email_verification` purpose only)
+```json
+{
+  "error": "email already registered"
+}
+```
+
+- **400 Bad Request:** Email not found (for `password_reset` purpose only)
+```json
+{
+  "error": "email not found"
+}
+```
+
+**Notes:**
+- OTP code is 6 digits
+- OTP expires after 10 minutes (default, configurable via `OTP_EXPIRY_MINUTES`)
+- Any existing unverified OTPs for the same email and purpose are deleted before sending a new one
+- Email is sent with a beautiful HTML template including the code and expiration warning
+
+---
+
+### Verify OTP
+Verify the OTP code sent to the email address.
+
+**Endpoint:** `POST /otp/verify`  
+**Authentication:** None (Public)
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "purpose": "email_verification"
+}
+```
+
+**Validation Rules:**
+- `email`: required, valid email format
+- `code`: required, exactly 6 digits
+- `purpose`: required, must match the OTP purpose
+
+**Success Response (200):**
+```json
+{
+  "message": "OTP verified successfully",
+  "data": {
+    "email": "user@example.com",
+    "purpose": "email_verification"
+  }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Invalid or expired OTP
+```json
+{
+  "error": "invalid or expired OTP"
+}
+```
+
+- **400 Bad Request:** OTP already used
+```json
+{
+  "error": "OTP already used"
+}
+```
+
+- **400 Bad Request:** OTP has expired
+```json
+{
+  "error": "OTP has expired"
+}
+```
+
+**Notes:**
+- After successful verification, the OTP is marked as `verified = true`
+- OTP can only be verified once
+- Expired OTPs (>10 minutes old) cannot be verified
+- The verified OTP must be used within its validity period for the intended action
+
+---
+
+### Reset Password with OTP
+Reset user password using a verified OTP code.
+
+**Endpoint:** `POST /auth/reset-password`  
+**Authentication:** None (Public)
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "new_password": "newSecurePassword123",
+  "otp_code": "654321"
+}
+```
+
+**Validation Rules:**
+- `email`: required, valid email format
+- `new_password`: required, minimum 6 characters
+- `otp_code`: required, exactly 6 digits
+
+**Success Response (200):**
+```json
+{
+  "message": "password reset successfully"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request:** Invalid OTP code
+```json
+{
+  "error": "invalid OTP code"
+}
+```
+
+- **400 Bad Request:** OTP not verified
+```json
+{
+  "error": "OTP not verified. Please verify OTP first"
+}
+```
+
+- **400 Bad Request:** OTP has expired
+```json
+{
+  "error": "OTP has expired. Please request a new one"
+}
+```
+
+- **400 Bad Request:** User not found
+```json
+{
+  "error": "user not found"
+}
+```
+
+**Notes:**
+- OTP must be verified (via `/otp/verify`) before using this endpoint
+- OTP purpose must be `password_reset`
+- Password is hashed using bcrypt before storage
+- All existing user sessions are invalidated (user logged out from all devices)
+- Used OTP is deleted after successful password reset
+
+---
+
+### OTP Workflow Examples
+
+#### 1. Registration with Email Verification
+
+```bash
+# Step 1: Send OTP for email verification
+curl -X POST http://localhost:8080/otp/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newuser@example.com",
+    "purpose": "email_verification"
+  }'
+
+# Response: OTP sent to email
+
+# Step 2: User receives email with 6-digit code (e.g., 123456)
+
+# Step 3: Verify OTP
+curl -X POST http://localhost:8080/otp/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newuser@example.com",
+    "code": "123456",
+    "purpose": "email_verification"
+  }'
+
+# Response: OTP verified successfully
+
+# Step 4: Register user (OTP verified = true)
+curl -X POST http://localhost:8080/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newuser",
+    "fullname": "New User",
+    "email": "newuser@example.com",
+    "password": "password123"
+  }'
+
+# Response: User registered with email_verified = true
+```
+
+#### 2. Password Reset Flow
+
+```bash
+# Step 1: Request password reset OTP
+curl -X POST http://localhost:8080/otp/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "existing@example.com",
+    "purpose": "password_reset"
+  }'
+
+# Step 2: Verify OTP from email
+curl -X POST http://localhost:8080/otp/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "existing@example.com",
+    "code": "654321",
+    "purpose": "password_reset"
+  }'
+
+# Step 3: Reset password with verified OTP
+curl -X POST http://localhost:8080/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "existing@example.com",
+    "new_password": "newPassword123",
+    "otp_code": "654321"
+  }'
+
+# Response: Password reset successfully
+# Note: All user sessions are invalidated
+```
+
+---
+
+### OTP Configuration
+
+**Environment Variables:**
+
+```env
+# Gmail SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-gmail-app-password
+SMTP_FROM=your-email@gmail.com
+
+# OTP Settings
+OTP_EXPIRY_MINUTES=10
+```
+
+**Gmail App Password Setup:**
+1. Go to https://myaccount.google.com/security
+2. Enable 2-Step Verification
+3. Go to https://myaccount.google.com/apppasswords
+4. Generate app password for "Mail"
+5. Copy the 16-character code (no spaces)
+6. Use in `SMTP_PASSWORD` environment variable
+
+---
+
+### OTP Security Features
+
+| Feature | Description |
+|---------|-------------|
+| **Time-Limited** | OTPs expire after 10 minutes (configurable) |
+| **One-Time Use** | Cannot reuse verified OTPs |
+| **Purpose Isolation** | Email verification OTP ≠ Password reset OTP |
+| **Email Verification** | Tracked in `users.email_verified` field |
+| **Session Invalidation** | All sessions logged out on password reset |
+| **Auto Cleanup** | Old OTPs deleted when sending new ones |
+| **Bcrypt Hashing** | Secure password storage |
+
+---
+
+### OTP Email Template
+
+The OTP email includes:
+- Professional header with branding
+- Clear purpose message (email verification, password reset, or login)
+- Large, easy-to-read 6-digit code
+- Expiration warning (10 minutes)
+- Security reminder if user didn't request it
+- Responsive design for mobile devices
+
+---
+
+### OTP Database Schema
+
+**OTPs Table:**
+```sql
+CREATE TABLE otps (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Indexes for performance
+CREATE INDEX idx_otps_email ON otps(email);
+CREATE INDEX idx_otps_purpose ON otps(purpose);
+CREATE INDEX idx_otps_expires_at ON otps(expires_at);
+CREATE INDEX idx_otps_email_purpose ON otps(email, purpose);
+```
+
+**Users Table (Email Verification):**
+```sql
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
+```
+
+---
+
+### OTP Best Practices
+
+**Security:**
+- ✅ Always validate email format
+- ✅ Check OTP expiration before use
+- ✅ Verify OTP purpose matches intended action
+- ✅ Invalidate sessions on password reset
+- ✅ Delete used OTPs immediately
+- ✅ Use HTTPS in production
+
+**User Experience:**
+- ✅ Show countdown timer (10 minutes)
+- ✅ Provide "Resend OTP" option
+- ✅ Clear error messages
+- ✅ Success confirmation feedback
+- ✅ Mobile-friendly email design
+
+**Production:**
+- ✅ Implement rate limiting (max 3 OTPs per hour per email)
+- ✅ Monitor failed verification attempts
+- ✅ Log OTP operations for security audits
+- ✅ Set up email delivery monitoring
+- ✅ Consider SMS alternative for critical operations
 
 ---
 
