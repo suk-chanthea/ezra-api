@@ -149,6 +149,17 @@ func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture str
 		if err := uc.userRepo.Save(user); err != nil {
 			return nil, err
 		}
+	} else {
+		// User exists - update their information from Google
+		user.Fullname = fullname
+		user.Profile = profilePicture
+		user.Email = email // In case Google email changed
+		user.UpdatedAt = time.Now()
+
+		// Update user data in database
+		if err := uc.userRepo.Update(user); err != nil {
+			return nil, err
+		}
 	}
 
 	// Generate JWT
