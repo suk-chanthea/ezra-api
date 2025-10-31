@@ -213,7 +213,10 @@ func main() {
 	// Initialize Firebase Cloud Messaging service
 	fcmService, err := firebase.NewFCMService(config.FirebaseCredentialPath, deviceTokenRepo)
 	if err != nil {
-		log.Fatalf("❌ Failed to initialize FCM service: %v", err)
+		log.Printf("⚠️  Warning: Failed to initialize FCM service: %v", err)
+		log.Println("⚠️  Continuing without push notifications...")
+		// Use dummy FCM service as fallback
+		fcmService, _ = firebase.NewFCMService("", deviceTokenRepo)
 	}
 
 	// Initialize Payway service
