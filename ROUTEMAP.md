@@ -30,10 +30,15 @@ Development: http://localhost:8080
 ## Authentication
 
 ### Register
-Create a new user account with email/password.
+Create a new user account with email/password. **Requires verified OTP** for email verification.
 
 **Endpoint:** `POST /register`  
 **Authentication:** None (Public)
+
+**Prerequisites:**
+1. Send OTP to email: `POST /otp/send` with `purpose: "email_verification"`
+2. Verify OTP: `POST /otp/verify` with the code received
+3. Then register with the verified OTP code
 
 **Request Body:**
 ```json
@@ -41,15 +46,17 @@ Create a new user account with email/password.
   "username": "johndoe",
   "fullname": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "otp_code": "123456"
 }
 ```
 
 **Validation Rules:**
-- `username`: required, min 1 char, max 100 chars
+- `username`: required, min 3 chars, max 100 chars
 - `fullname`: required, min 1 char, max 100 chars
 - `email`: required, valid email format, max 100 chars
 - `password`: required, min 6 chars
+- `otp_code`: required, exactly 6 digits, must be verified via `/otp/verify`
 
 **Success Response (201):**
 ```json
@@ -61,7 +68,21 @@ Create a new user account with email/password.
 
 **Error Responses:**
 - **400 Bad Request:** Invalid input or validation error
+- **400 Bad Request:** Invalid or expired OTP code
+- **400 Bad Request:** OTP not verified (must call `/otp/verify` first)
 - **400 Bad Request:** Username or email already exists
+
+```json
+{
+  "error": "invalid OTP code"
+}
+```
+
+```json
+{
+  "error": "OTP not verified. Please verify OTP first via /otp/verify"
+}
+```
 
 ```json
 {
@@ -72,12 +93,12 @@ Create a new user account with email/password.
 ---
 
 ### Login
-Authenticate with username/email and password to get JWT token.
+Authenticate with username/email and password to get JWT token. **Optional 2FA** with OTP.
 
 **Endpoint:** `POST /login`  
 **Authentication:** None (Public)
 
-**Request Body:**
+**Request Body (Basic Login):**
 ```json
 {
   "username": "johndoe",
@@ -93,6 +114,21 @@ Or use email:
 }
 ```
 
+**Request Body (Login with 2FA):**
+For extra security, optionally use OTP-based two-factor authentication:
+
+1. Send OTP to user's email: `POST /otp/send` with `purpose: "login"` and user's email
+2. Verify OTP: `POST /otp/verify` with the code received
+3. Then login with the verified OTP code
+
+```json
+{
+  "username": "johndoe",
+  "password": "password123",
+  "otp_code": "123456"
+}
+```
+
 **Success Response (200):**
 ```json
 {
@@ -103,12 +139,23 @@ Or use email:
 **Error Responses:**
 - **401 Unauthorized:** Invalid credentials
 - **400 Bad Request:** Invalid request format
+- **400 Bad Request:** Invalid 2FA OTP code (if `otp_code` provided)
+- **400 Bad Request:** OTP not verified (must call `/otp/verify` first)
+- **400 Bad Request:** OTP expired
 
 ```json
 {
   "error": "invalid credentials"
 }
 ```
+
+```json
+{
+  "error": "invalid 2FA OTP code"
+}
+```
+
+**Note:** The `otp_code` field is optional. If omitted, login proceeds with username/password only. If provided, it must be a valid, verified OTP with `purpose: "login"`.
 
 ---
 
@@ -193,7 +240,14 @@ Generate and send an OTP code to the specified email address.
 - **400 Bad Request:** Email already registered (for `email_verification` purpose only)
 ```json
 {
-  "error": "email already registered"
+  "error": "email already registered, please login or reset password"
+}
+```
+
+- **400 Bad Request:** Email not found (for `login` and `password_reset` purposes)
+```json
+{
+  "error": "email not found"
 }
 ```
 
@@ -366,14 +420,15 @@ curl -X POST http://localhost:8080/otp/verify \
 
 # Response: OTP verified successfully
 
-# Step 4: Register user (OTP verified = true)
+# Step 4: Register user with verified OTP code
 curl -X POST http://localhost:8080/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "newuser",
     "fullname": "New User",
     "email": "newuser@example.com",
-    "password": "password123"
+    "password": "securePassword123",
+    "otp_code": "123456"
   }'
 
 # Response: User registered with email_verified = true
@@ -411,6 +466,40 @@ curl -X POST http://localhost:8080/auth/reset-password \
 # Response: Password reset successfully
 # Note: All user sessions are invalidated
 ```
+
+#### 3. Login with 2FA (Optional)
+
+```bash
+# Step 1: Request login OTP
+curl -X POST http://localhost:8080/otp/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "purpose": "login"
+  }'
+
+# Step 2: Verify OTP from email
+curl -X POST http://localhost:8080/otp/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "code": "789012",
+    "purpose": "login"
+  }'
+
+# Step 3: Login with password and verified OTP
+curl -X POST http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "userPassword123",
+    "otp_code": "789012"
+  }'
+
+# Response: JWT token with 2FA verification
+```
+
+**Note:** The `otp_code` in login is optional. If you want standard username/password login without 2FA, simply omit the `otp_code` field.
 
 ---
 

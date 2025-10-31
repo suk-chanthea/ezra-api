@@ -40,6 +40,21 @@ func NewAuthUseCase(repo repository.UserRepository, otpRepo repository.OTPReposi
 }
 
 func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, error) {
+	// Verify OTP first (email_verification purpose)
+	otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(req.Email, req.OTPCode, entity.OTPPurpose("email_verification"))
+	if err != nil {
+		return nil, errors.New("invalid OTP code")
+	}
+
+	// Check if OTP is verified and not expired
+	if !otp.Verified {
+		return nil, errors.New("OTP not verified. Please verify OTP first via /otp/verify")
+	}
+
+	if otp.IsExpired() {
+		return nil, errors.New("OTP has expired. Please request a new one")
+	}
+
 	// Check if user already exists
 	existing, _ := uc.userRepo.FindByUsername(req.Username)
 	if existing != nil {
@@ -60,8 +75,7 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 	// Create entity
 	user := entity.NewUser(req.Username, req.Fullname, req.Email, string(hash))
 	
-	// Mark email as verified if registration includes verified email flag
-	// Email should be verified via OTP before registration
+	// Mark email as verified since OTP was verified
 	user.EmailVerified = true
 
 	// Save to database
@@ -80,6 +94,9 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 		return nil, err
 	}
 
+	// Delete the used OTP (only for this purpose)
+	go uc.otpRepo.DeleteByEmailAndPurpose(req.Email, entity.OTPPurpose("email_verification"))
+
 	return &dto.AuthResponse{
 		Message: "user registered successfully",
 		Token:   token,
@@ -96,6 +113,26 @@ func (uc *authUseCase) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return nil, errors.New("invalid credentials")
+	}
+
+	// Optional 2FA: If OTP code is provided, verify it
+	if req.OTPCode != "" {
+		otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(user.Email, req.OTPCode, entity.OTPPurpose("login"))
+		if err != nil {
+			return nil, errors.New("invalid 2FA OTP code")
+		}
+
+		// Check if OTP is verified and not expired
+		if !otp.Verified {
+			return nil, errors.New("OTP not verified. Please verify OTP first via /otp/verify")
+		}
+
+		if otp.IsExpired() {
+			return nil, errors.New("OTP has expired. Please request a new one")
+		}
+
+		// Delete the used OTP (only for this purpose)
+		go uc.otpRepo.DeleteByEmailAndPurpose(user.Email, entity.OTPPurpose("login"))
 	}
 
 	// Generate JWT
@@ -225,8 +262,8 @@ func (uc *authUseCase) ResetPassword(req *dto.ResetPasswordRequest) (*dto.Succes
 	// Invalidate all existing tokens (logout all sessions)
 	uc.userRepo.UpdateToken(user.ID, "")
 
-	// Delete the used OTP
-	go uc.otpRepo.DeleteByEmail(req.Email)
+	// Delete the used OTP (only for this purpose)
+	go uc.otpRepo.DeleteByEmailAndPurpose(req.Email, entity.OTPPurpose("password_reset"))
 
 	return &dto.SuccessResponse{
 		Message: "password reset successfully",

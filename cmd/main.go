@@ -35,6 +35,7 @@ type Config struct {
 	SMTPUsername           string
 	SMTPPassword           string
 	SMTPFrom               string
+    SMTPSecure             string
 	OTPExpiry              int // in minutes
 }
 
@@ -102,24 +103,38 @@ func loadConfig() *Config {
 	// SMTP configuration for sending OTP emails
 	smtpHost := os.Getenv("SMTP_HOST")
 	if smtpHost == "" {
-		smtpHost = "smtp.gmail.com" // Default Gmail SMTP
+		smtpHost = "mail.privateemail.com" // Default Gmail SMTP
 	}
 
 	smtpPort := os.Getenv("SMTP_PORT")
 	if smtpPort == "" {
-		smtpPort = "587" // Default SMTP port for TLS
+		smtpPort = "465" // Default SMTP port for TLS
 	}
 
 	smtpUsername := os.Getenv("SMTP_USERNAME")
-	// Required: Set via environment variable (your Gmail address)
+	if smtpUsername == "" {
+		smtpUsername = "development@komplech.com" // Default Gmail SMTP
+	}
 
 	smtpPassword := os.Getenv("SMTP_PASSWORD")
-	// Required: Set via environment variable (Gmail App Password)
+	if smtpPassword == "" {
+		smtpPassword = "G7x!pQ2vLm" // Default Gmail SMTP
+	}
 
 	smtpFrom := os.Getenv("SMTP_FROM")
 	if smtpFrom == "" {
-		smtpFrom = smtpUsername // Use same as username if not specified
+		smtpFrom = "ezra@komplech.com" // Use same as username if not specified
 	}
+
+    smtpSecure := os.Getenv("SMTP_SECURE")
+    if smtpSecure == "" {
+        // Default based on port: 465 -> ssl, else starttls
+        if smtpPort == "465" {
+            smtpSecure = "ssl"
+        } else {
+            smtpSecure = "starttls"
+        }
+    }
 
 	otpExpiry := 10 // Default 10 minutes
 	if otpExpiryEnv := os.Getenv("OTP_EXPIRY_MINUTES"); otpExpiryEnv != "" {
@@ -147,6 +162,7 @@ func loadConfig() *Config {
 		SMTPUsername:           smtpUsername,
 		SMTPPassword:           smtpPassword,
 		SMTPFrom:               smtpFrom,
+        SMTPSecure:             smtpSecure,
 		OTPExpiry:              otpExpiry,
 	}
 }
@@ -211,7 +227,8 @@ func main() {
 		config.SMTPPort,
 		config.SMTPUsername,
 		config.SMTPPassword,
-		config.SMTPFrom,
+        config.SMTPFrom,
+        config.SMTPSecure,
 	)
 	if config.SMTPUsername == "" || config.SMTPPassword == "" {
 		log.Println("⚠️  Warning: SMTP credentials not set. OTP emails will not be sent.")

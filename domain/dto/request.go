@@ -8,12 +8,14 @@ type RegisterRequest struct {
 	Fullname string `json:"fullname" binding:"required,min=1,max=100"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+	OTPCode  string `json:"otp_code" binding:"required,min=6,max=6"` // Must verify email via OTP before registration
 }
 
 // LoginRequest represents login input
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	OTPCode  string `json:"otp_code,omitempty" binding:"omitempty,min=6,max=6"` // Optional 2FA OTP code
 }
 
 // GoogleLoginRequest represents Google OAuth login input

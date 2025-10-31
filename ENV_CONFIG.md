@@ -37,6 +37,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-gmail-app-password
 SMTP_FROM=your-email@gmail.com
+SMTP_SECURE=starttls  # options: starttls (default), ssl, plain
 
 # OTP Settings
 OTP_EXPIRY_MINUTES=10
@@ -216,6 +217,15 @@ Required for sending OTP verification emails.
 7. Copy the 16-character password
 8. Remove spaces: `abcdefghijklmnop`
 9. Use in `SMTP_PASSWORD`
+
+#### SMTP_SECURE
+- **Description:** Connection security method
+- **Options:**
+  - `starttls` (default, port 587)
+  - `ssl` (implicit TLS, port 465)
+  - `plain` (no TLS; not recommended)
+- **Auto-defaults:** If `SMTP_PORT=465`, defaults to `ssl`; otherwise `starttls`.
+- **Example:** `SMTP_SECURE=starttls`
 
 #### SMTP_FROM
 - **Description:** Email address shown as sender

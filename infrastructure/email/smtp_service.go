@@ -1,7 +1,9 @@
 package email
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"strings"
 )
@@ -18,16 +20,18 @@ type smtpEmailService struct {
 	username string
 	password string
 	from     string
+    secure   string // starttls (default), ssl, plain
 }
 
 // NewSMTPEmailService creates a new SMTP email service
-func NewSMTPEmailService(host, port, username, password, from string) EmailService {
+func NewSMTPEmailService(host, port, username, password, from, secure string) EmailService {
 	return &smtpEmailService{
 		host:     host,
 		port:     port,
 		username: username,
 		password: password,
-		from:     from,
+        from:     from,
+        secure:   secure,
 	}
 }
 
@@ -88,10 +92,10 @@ func (s *smtpEmailService) SendOTP(to, code, purpose string) error {
 
 // SendEmail sends a generic email
 func (s *smtpEmailService) SendEmail(to, subject, body string) error {
-	// Setup authentication
-	auth := smtp.PlainAuth("", s.username, s.password, s.host)
+    // Setup authentication
+    auth := smtp.PlainAuth("", s.username, s.password, s.host)
 
-	// Compose message with HTML
+    // Compose message with HTML
 	headers := make(map[string]string)
 	headers["From"] = s.from
 	headers["To"] = to
@@ -105,23 +109,153 @@ func (s *smtpEmailService) SendEmail(to, subject, body string) error {
 	}
 	message += "\r\n" + body
 
-	// Connect to the SMTP server
-	addr := fmt.Sprintf("%s:%s", s.host, s.port)
-	
-	// Send the email
-	err := smtp.SendMail(
-		addr,
-		auth,
-		s.from,
-		[]string{to},
-		[]byte(message),
-	)
+    addr := net.JoinHostPort(s.host, s.port)
 
-	if err != nil {
-		return fmt.Errorf("failed to send email: %v", err)
-	}
+    // Determine secure method
+    secure := strings.ToLower(strings.TrimSpace(s.secure))
+    if secure == "" {
+        // Default heuristic: 465 -> ssl, otherwise starttls
+        if s.port == "465" {
+            secure = "ssl"
+        } else {
+            secure = "starttls"
+        }
+    }
 
-	return nil
+    // TLS config with proper server name for SNI and verification
+    tlsConfig := &tls.Config{ServerName: s.host}
+
+    switch secure {
+    case "ssl":
+        // Implicit TLS (port 465)
+        conn, err := tls.Dial("tcp", addr, tlsConfig)
+        if err != nil {
+            return fmt.Errorf("failed to connect (ssl): %v", err)
+        }
+        defer conn.Close()
+
+        client, err := smtp.NewClient(conn, s.host)
+        if err != nil {
+            return fmt.Errorf("failed to create smtp client (ssl): %v", err)
+        }
+        defer client.Quit()
+
+        if ok, _ := client.Extension("AUTH"); ok {
+            if err := client.Auth(auth); err != nil {
+                // Common Gmail hint
+                if strings.Contains(strings.ToLower(err.Error()), "535") {
+                    return fmt.Errorf("failed to authenticate SMTP (ssl): %v. If using Gmail, use an App Password and set SMTP_USERNAME as your Gmail address.", err)
+                }
+                return fmt.Errorf("failed to authenticate SMTP (ssl): %v", err)
+            }
+        }
+
+        if err := client.Mail(s.from); err != nil {
+            return fmt.Errorf("failed to set from: %v", err)
+        }
+        if err := client.Rcpt(to); err != nil {
+            return fmt.Errorf("failed to set rcpt: %v", err)
+        }
+        wc, err := client.Data()
+        if err != nil {
+            return fmt.Errorf("failed to start data: %v", err)
+        }
+        if _, err := wc.Write([]byte(message)); err != nil {
+            _ = wc.Close()
+            return fmt.Errorf("failed to write message: %v", err)
+        }
+        if err := wc.Close(); err != nil {
+            return fmt.Errorf("failed to close message: %v", err)
+        }
+        return nil
+
+    case "plain":
+        // No TLS (not recommended). Use only in trusted environments.
+        client, err := smtp.Dial(addr)
+        if err != nil {
+            return fmt.Errorf("failed to dial smtp (plain): %v", err)
+        }
+        defer client.Quit()
+
+        if ok, _ := client.Extension("AUTH"); ok {
+            if err := client.Auth(auth); err != nil {
+                if strings.Contains(strings.ToLower(err.Error()), "535") {
+                    return fmt.Errorf("failed to authenticate SMTP (plain): %v. If using Gmail, use an App Password and set SMTP_USERNAME as your Gmail address.", err)
+                }
+                return fmt.Errorf("failed to authenticate SMTP (plain): %v", err)
+            }
+        }
+
+        if err := client.Mail(s.from); err != nil {
+            return fmt.Errorf("failed to set from: %v", err)
+        }
+        if err := client.Rcpt(to); err != nil {
+            return fmt.Errorf("failed to set rcpt: %v", err)
+        }
+        wc, err := client.Data()
+        if err != nil {
+            return fmt.Errorf("failed to start data: %v", err)
+        }
+        if _, err := wc.Write([]byte(message)); err != nil {
+            _ = wc.Close()
+            return fmt.Errorf("failed to write message: %v", err)
+        }
+        if err := wc.Close(); err != nil {
+            return fmt.Errorf("failed to close message: %v", err)
+        }
+        return nil
+
+    default: // starttls (recommended)
+        // Start with plain TCP, then upgrade via STARTTLS
+        conn, err := net.Dial("tcp", addr)
+        if err != nil {
+            return fmt.Errorf("failed to connect smtp: %v", err)
+        }
+        defer conn.Close()
+
+        client, err := smtp.NewClient(conn, s.host)
+        if err != nil {
+            return fmt.Errorf("failed to create smtp client: %v", err)
+        }
+        defer client.Quit()
+
+        // Upgrade to TLS
+        if ok, _ := client.Extension("STARTTLS"); ok {
+            if err := client.StartTLS(tlsConfig); err != nil {
+                return fmt.Errorf("failed to starttls: %v", err)
+            }
+        } else {
+            return fmt.Errorf("server does not support STARTTLS")
+        }
+
+        if ok, _ := client.Extension("AUTH"); ok {
+            if err := client.Auth(auth); err != nil {
+                if strings.Contains(strings.ToLower(err.Error()), "535") {
+                    return fmt.Errorf("failed to authenticate SMTP: %v. If using Gmail, use an App Password and set SMTP_USERNAME as your Gmail address.", err)
+                }
+                return fmt.Errorf("failed to authenticate SMTP: %v", err)
+            }
+        }
+
+        if err := client.Mail(s.from); err != nil {
+            return fmt.Errorf("failed to set from: %v", err)
+        }
+        if err := client.Rcpt(to); err != nil {
+            return fmt.Errorf("failed to set rcpt: %v", err)
+        }
+        wc, err := client.Data()
+        if err != nil {
+            return fmt.Errorf("failed to start data: %v", err)
+        }
+        if _, err := wc.Write([]byte(message)); err != nil {
+            _ = wc.Close()
+            return fmt.Errorf("failed to write message: %v", err)
+        }
+        if err := wc.Close(); err != nil {
+            return fmt.Errorf("failed to close message: %v", err)
+        }
+        return nil
+    }
 }
 
 // ValidateEmail performs basic email validation

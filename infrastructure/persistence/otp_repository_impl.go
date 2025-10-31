@@ -73,6 +73,10 @@ func (r *otpRepositoryImpl) DeleteByEmail(email string) error {
 	return r.db.Where("email = ?", email).Delete(&OTPModel{}).Error
 }
 
+func (r *otpRepositoryImpl) DeleteByEmailAndPurpose(email string, purpose entity.OTPPurpose) error {
+	return r.db.Where("email = ? AND purpose = ?", email, purpose).Delete(&OTPModel{}).Error
+}
+
 func (r *otpRepositoryImpl) DeleteExpired() error {
 	return r.db.Where("expires_at < ?", time.Now()).Delete(&OTPModel{}).Error
 }

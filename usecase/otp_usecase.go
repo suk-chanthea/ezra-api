@@ -53,7 +53,15 @@ func (uc *otpUseCase) SendOTP(req *dto.SendOTPRequest) (*dto.OTPResponse, error)
 	if req.Purpose == "email_verification" {
 		existingUser, _ := uc.userRepo.FindByEmail(req.Email)
 		if existingUser != nil {
-			return nil, errors.New("email already registered")
+			return nil, errors.New("email already registered, please login or reset password")
+		}
+	}
+
+	// For login (2FA), ensure the email exists
+	if req.Purpose == "login" {
+		_, err := uc.userRepo.FindByEmail(req.Email)
+		if err != nil {
+			return nil, errors.New("email not found")
 		}
 	}
 
@@ -123,8 +131,7 @@ func (uc *otpUseCase) VerifyOTP(req *dto.VerifyOTPRequest) (*dto.SuccessResponse
 		return nil, errors.New("failed to verify OTP")
 	}
 
-	// Clean up old OTPs for this email
-	go uc.otpRepo.DeleteByEmail(req.Email)
+	// Don't delete yet - OTP will be deleted after it's used in register/login/reset-password
 
 	return &dto.SuccessResponse{
 		Message: "OTP verified successfully",

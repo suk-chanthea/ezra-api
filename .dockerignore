@@ -1,0 +1,40 @@
+# VCS and editor
+.git
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Build artifacts and binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+*.log
+/tmp/
+/dist/
+/build/
+/ezra-api.exe
+/cmd.exe
+
+# Docker artifacts (not needed in build context)
+Dockerfile*
+docker-compose*.yml
+
+# Node and others (safety)
+node_modules/
+
+# OS junk
+Thumbs.db
+
+# Not needed in builder context
+/config/ssl/
+README.md
+ARCHITECTURE.md
+ENV_CONFIG.md
+DEPLOYMENT.md
+ROUTEMAP.md
+
+# Keep migrations (used by image)
+#! Do NOT ignore /migrate

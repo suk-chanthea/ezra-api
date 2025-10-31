@@ -309,6 +309,7 @@ go build -o ezra-api ./cmd/main.go
 Migrations are automatically applied when the database container starts for the first time.
 
 **Manual migration:**
+#### Lunix
 ```bash
 # Apply migration
 docker exec -i ezra-postgres psql -U postgres -d ezradb < migrate/000000_postgres.up.sql
@@ -316,6 +317,13 @@ docker exec -i ezra-postgres psql -U postgres -d ezradb < migrate/000000_postgre
 # Rollback
 docker exec -i ezra-postgres psql -U postgres -d ezradb < migrate/000000_postgres.down.sql
 ```
+#### Window
+```bash
+# Apply migration
+Get-Content migrate/000000_postgres.up.sql | docker exec -i ezra-postgres-dev psql -U postgres -d ezradb
+
+#Rollback
+Get-Content migrate/000000_postgres.down.sql | docker exec -i ezra-postgres-dev psql -U postgres -d ezradb
 
 ## 📚 API Documentation
 

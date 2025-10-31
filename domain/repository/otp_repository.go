@@ -9,6 +9,7 @@ type OTPRepository interface {
 	FindByEmailCodeAndPurpose(email, code string, purpose entity.OTPPurpose) (*entity.OTP, error)
 	Update(otp *entity.OTP) error
 	DeleteByEmail(email string) error
+	DeleteByEmailAndPurpose(email string, purpose entity.OTPPurpose) error
 	DeleteExpired() error
 }
 
