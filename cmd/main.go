@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/suk-chanthea/ezra/infrastructure/email"
 	"github.com/suk-chanthea/ezra/infrastructure/firebase"
 	"github.com/suk-chanthea/ezra/infrastructure/payment"
@@ -168,6 +169,13 @@ func loadConfig() *Config {
 }
 
 func main() {
+	// Load .env file if it exists (for local development)
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️  No .env file found, using environment variables")
+	} else {
+		log.Println("✅ .env file loaded successfully")
+	}
+
 	// Set timezone for the application
 	loc, err := time.LoadLocation("Asia/Phnom_Penh")
 	if err != nil {
