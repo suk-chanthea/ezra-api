@@ -81,7 +81,7 @@ func (r *Router) Setup() *gin.Engine {
 	router.POST("/auth/reset-password", r.authHandler.ResetPassword)
 
 	// Public donation routes (companies can donate without auth)
-	router.POST("/donations", r.donationHandler.Create)
+	// router.POST("/donations", r.donationHandler.Create)
 	router.POST("/donations/:id/pay", r.donationHandler.InitiatePayment)
 	router.POST("/donations/:id/regenerate-qr", r.donationHandler.RegenerateQR)
 	router.GET("/donations", r.donationHandler.GetAll)
@@ -215,6 +215,7 @@ func (r *Router) Setup() *gin.Engine {
 		// Protected Donation routes (require authentication)
 		donations := api.Group("/donations")
 		{
+			donations.POST("/", r.donationHandler.Create)
 			donations.GET("/user", r.donationHandler.GetByUser)
 			donations.PUT("/:id/status", r.donationHandler.UpdateStatus)
 			donations.DELETE("/:id", r.donationHandler.Delete)
