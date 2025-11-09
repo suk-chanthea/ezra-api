@@ -1,5 +1,0 @@
-CREATE TABLE IF NOT EXISTS settings (
-    id SERIAL NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-)
