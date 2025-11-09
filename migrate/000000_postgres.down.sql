@@ -21,15 +21,17 @@ DROP TRIGGER IF EXISTS update_bands_updated_at ON bands;
 DROP TRIGGER IF EXISTS update_churches_updated_at ON churches;
 
 -- ============================
--- 2. Drop foreign keys and columns from users
+-- 2. Drop foreign keys and columns from users (only if table exists)
 -- ============================
 
--- Must drop the constraints before dropping related tables
-ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
-ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_church_id;
-
--- Drop the columns (no need since table will be dropped entirely)
--- These columns are now part of the CREATE TABLE, not ALTER TABLE
+-- Drop the constraints only if the users table exists
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users') THEN
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_band_id;
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_church_id;
+    END IF;
+END $$;
 
 -- ============================
 -- 3. Drop tables in reverse dependency order

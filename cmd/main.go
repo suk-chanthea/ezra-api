@@ -1,201 +1,91 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/suk-chanthea/ezra/config"
+	"github.com/suk-chanthea/ezra/infrastructure/cache"
+	"github.com/suk-chanthea/ezra/infrastructure/database"
 	"github.com/suk-chanthea/ezra/infrastructure/email"
 	"github.com/suk-chanthea/ezra/infrastructure/firebase"
-	"github.com/suk-chanthea/ezra/infrastructure/payment"
+	"github.com/suk-chanthea/ezra/infrastructure/logger"
+	"github.com/suk-chanthea/ezra/infrastructure/payway"
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
 	"github.com/suk-chanthea/ezra/interface/http/handler"
 	"github.com/suk-chanthea/ezra/interface/http/router"
 	"github.com/suk-chanthea/ezra/usecase"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"go.uber.org/zap"
 )
 
-type Config struct {
-	Port                   string
-	PostgresURL            string
-	SecretKey              string
-	GoogleClientID         string
-	FirebaseCredentialPath string
-	PaywayMerchantID       string
-	PaywayAPIKey           string
-	PaywayAPIUsername      string
-	PaywayBaseURL          string
-	PaywayReturnURL        string
-	PaywayContinueURL      string
-	PaywayCallbackURL      string
-	SMTPHost               string
-	SMTPPort               string
-	SMTPUsername           string
-	SMTPPassword           string
-	SMTPFrom               string
-    SMTPSecure             string
-	OTPExpiry              int // in minutes
+func main() {
+	// Run application
+	if err := run(); err != nil {
+		log.Fatalf("Failed to start application: %v", err)
+	}
 }
 
-func loadConfig() *Config {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+func run() error {
+	// ==================== Configuration ====================
+	log.Println("📋 Loading configuration...")
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	pg := os.Getenv("POSTGRES_URL")
-	if pg == "" {
-		pg = "postgres://postgres:secret@postgres:5432/ezradb?sslmode=disable"
+	// ==================== Logger ====================
+	log.Println("📝 Initializing logger...")
+	if err := logger.InitLogger(cfg.App.Environment); err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
+	appLogger := logger.GetLogger()
+	appLogger.Info("Logger initialized",
+		zap.String("environment", cfg.App.Environment),
+		zap.String("version", cfg.App.Version),
+	)
 
-	secret := os.Getenv("SECRET")
-	if secret == "" {
-		secret = "paracletus"
+	// ==================== Database ====================
+	appLogger.Info("🗄️  Connecting to database...")
+	db, err := database.NewPostgresDB(&cfg.Database)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+	appLogger.Info("✅ Database connected")
 
-	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
-	if googleClientID == "" {
-		googleClientID = "" // Set via environment variable
-	}
-
-	firebaseCredPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
-	// Optional: If not set, FCM will be disabled (dummy service)
-
-	// Payway configuration
-	paywayMerchantID := os.Getenv("PAYWAY_MERCHANT_ID")
-	if paywayMerchantID == "" {
-		paywayMerchantID = "your_merchant_id" // Replace with actual merchant ID
-	}
-
-	paywayAPIKey := os.Getenv("PAYWAY_API_KEY")
-	if paywayAPIKey == "" {
-		paywayAPIKey = "your_api_key" // Replace with actual API key
-	}
-
-	paywayAPIUsername := os.Getenv("PAYWAY_API_USERNAME")
-	if paywayAPIUsername == "" {
-		paywayAPIUsername = "your_api_username" // Replace with actual username
-	}
-
-	paywayBaseURL := os.Getenv("PAYWAY_BASE_URL")
-	if paywayBaseURL == "" {
-		// Use sandbox by default
-		paywayBaseURL = "https://api-sandbox.payway.com.kh"
-	}
-
-	paywayReturnURL := os.Getenv("PAYWAY_RETURN_URL")
-	if paywayReturnURL == "" {
-		paywayReturnURL = "http://localhost:3000/donation/complete" // Frontend URL
-	}
-
-	paywayContinueURL := os.Getenv("PAYWAY_CONTINUE_URL")
-	if paywayContinueURL == "" {
-		paywayContinueURL = "http://localhost:3000/donation/success" // Frontend URL
-	}
-
-	paywayCallbackURL := os.Getenv("PAYWAY_CALLBACK_URL")
-	if paywayCallbackURL == "" {
-		paywayCallbackURL = "http://localhost:8080/webhooks/payway" // Backend webhook URL
-	}
-
-	// SMTP configuration for sending OTP emails
-	smtpHost := os.Getenv("SMTP_HOST")
-	if smtpHost == "" {
-		smtpHost = "mail.privateemail.com" // Default Gmail SMTP
-	}
-
-	smtpPort := os.Getenv("SMTP_PORT")
-	if smtpPort == "" {
-		smtpPort = "465" // Default SMTP port for TLS
-	}
-
-	smtpUsername := os.Getenv("SMTP_USERNAME")
-	if smtpUsername == "" {
-		smtpUsername = "development@komplech.com" // Default Gmail SMTP
-	}
-
-	smtpPassword := os.Getenv("SMTP_PASSWORD")
-	if smtpPassword == "" {
-		smtpPassword = "G7x!pQ2vLm" // Default Gmail SMTP
-	}
-
-	smtpFrom := os.Getenv("SMTP_FROM")
-	if smtpFrom == "" {
-		smtpFrom = "ezra@komplech.com" // Use same as username if not specified
-	}
-
-    smtpSecure := os.Getenv("SMTP_SECURE")
-    if smtpSecure == "" {
-        // Default based on port: 465 -> ssl, else starttls
-        if smtpPort == "465" {
-            smtpSecure = "ssl"
-        } else {
-            smtpSecure = "starttls"
-        }
-    }
-
-	otpExpiry := 10 // Default 10 minutes
-	if otpExpiryEnv := os.Getenv("OTP_EXPIRY_MINUTES"); otpExpiryEnv != "" {
-		// Parse OTP expiry from env if provided
-		if exp, err := time.ParseDuration(otpExpiryEnv + "m"); err == nil {
-			otpExpiry = int(exp.Minutes())
+	// Auto-migrate if in development
+	if cfg.App.Environment == "development" {
+		appLogger.Info("Running database migrations...")
+		if err := database.AutoMigrate(db); err != nil {
+			appLogger.Warn("Failed to run migrations", zap.Error(err))
 		}
 	}
 
-	return &Config{
-		Port:                   port,
-		PostgresURL:            pg,
-		SecretKey:              secret,
-		GoogleClientID:         googleClientID,
-		FirebaseCredentialPath: firebaseCredPath,
-		PaywayMerchantID:       paywayMerchantID,
-		PaywayAPIKey:           paywayAPIKey,
-		PaywayAPIUsername:      paywayAPIUsername,
-		PaywayBaseURL:          paywayBaseURL,
-		PaywayReturnURL:        paywayReturnURL,
-		PaywayContinueURL:      paywayContinueURL,
-		PaywayCallbackURL:      paywayCallbackURL,
-		SMTPHost:               smtpHost,
-		SMTPPort:               smtpPort,
-		SMTPUsername:           smtpUsername,
-		SMTPPassword:           smtpPassword,
-		SMTPFrom:               smtpFrom,
-        SMTPSecure:             smtpSecure,
-		OTPExpiry:              otpExpiry,
-	}
-}
-
-func main() {
-	// Load .env file if it exists (for local development)
-	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️  No .env file found, using environment variables")
+	// ==================== Cache (Optional) ====================
+	var cacheService cache.Cache
+	if cfg.Redis.Enabled {
+		appLogger.Info("💾 Connecting to Redis...")
+		redisClient, err := cache.NewRedisClient(&cfg.Redis)
+		if err != nil {
+			appLogger.Warn("Failed to connect to Redis, continuing without cache", zap.Error(err))
+			cacheService = cache.NewNoOpCache() // Fallback to no-op cache
+		} else {
+			cacheService = cache.NewRedisCache(redisClient)
+			appLogger.Info("✅ Redis connected")
+		}
 	} else {
-		log.Println("✅ .env file loaded successfully")
+		cacheService = cache.NewNoOpCache()
+		appLogger.Info("ℹ️  Cache disabled")
 	}
 
-	// Set timezone for the application
-	loc, err := time.LoadLocation("Asia/Phnom_Penh")
-	if err != nil {
-		log.Printf("⚠️  Warning: Could not load timezone, using default: %v", err)
-	} else {
-		time.Local = loc
-		log.Printf("🌏 Timezone set to: %s", loc.String())
-	}
-
-	// Load configuration
-	config := loadConfig()
-
-	// Connect to database
-	db, err := gorm.Open(postgres.Open(config.PostgresURL), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("❌ failed to connect database: %v", err)
-	}
-	log.Println("✅ PostgreSQL connected")
-
-	// Initialize repositories (Infrastructure layer)
+	// ==================== Repositories ====================
+	appLogger.Info("🏗️  Initializing repositories...")
 	userRepo := persistence.NewUserRepository(db)
 	musicRepo := persistence.NewMusicRepository(db)
 	eventRepo := persistence.NewEventRepository(db)
@@ -205,84 +95,201 @@ func main() {
 	settingRepo := persistence.NewSettingRepository(db)
 	notificationRepo := persistence.NewNotificationRepository(db)
 	deviceTokenRepo := persistence.NewDeviceTokenRepository(db)
+	otpRepo := persistence.NewOTPRepository(db)
 	donationRepo := persistence.NewDonationRepository(db)
 	supporterRepo := persistence.NewSupporterRepository(db)
 	churchRepo := persistence.NewChurchRepository(db)
-	otpRepo := persistence.NewOTPRepository(db)
+	appLogger.Info("✅ Repositories initialized")
 
-	// Initialize Firebase Cloud Messaging service
-	fcmService, err := firebase.NewFCMService(config.FirebaseCredentialPath, deviceTokenRepo)
-	if err != nil {
-		log.Printf("⚠️  Warning: Failed to initialize FCM service: %v", err)
-		log.Println("⚠️  Continuing without push notifications...")
-		// Use dummy FCM service as fallback
-		fcmService, _ = firebase.NewFCMService("", deviceTokenRepo)
-	}
-
-	// Initialize Payway service
-	paywayConfig := &payment.PaywayConfig{
-		MerchantID:   config.PaywayMerchantID,
-		APIKey:       config.PaywayAPIKey,
-		APIUsername:  config.PaywayAPIUsername,
-		BaseURL:      config.PaywayBaseURL,
-		ReturnURL:    config.PaywayReturnURL,
-		ContinueURL:  config.PaywayContinueURL,
-		CallbackURL:  config.PaywayCallbackURL,
-	}
-	paywayService := payment.NewPaywayService(paywayConfig)
-	log.Println("✅ Payway service initialized")
-
-	// Initialize Email service for OTP
-	emailService := email.NewSMTPEmailService(
-		config.SMTPHost,
-		config.SMTPPort,
-		config.SMTPUsername,
-		config.SMTPPassword,
-        config.SMTPFrom,
-        config.SMTPSecure,
-	)
-	if config.SMTPUsername == "" || config.SMTPPassword == "" {
-		log.Println("⚠️  Warning: SMTP credentials not set. OTP emails will not be sent.")
+	// ==================== External Services ====================
+	
+	// Firebase (Optional)
+	var fcmService firebase.FCMService
+	if cfg.Firebase.Enabled && cfg.Firebase.CredentialsPath != "" {
+		appLogger.Info("🔥 Initializing Firebase...")
+		fcmService = firebase.NewFCMService(cfg.Firebase.CredentialsPath, deviceTokenRepo)
+		appLogger.Info("✅ Firebase initialized")
 	} else {
-		log.Println("✅ Email service initialized")
+		appLogger.Info("ℹ️  Firebase disabled, using dummy service")
+		fcmService = firebase.NewDummyFCMService()
 	}
 
-	// Initialize use cases (Application layer)
-	authUseCase := usecase.NewAuthUseCase(userRepo, otpRepo, config.SecretKey, config.GoogleClientID)
-	musicUseCase := usecase.NewMusicUseCase(musicRepo)
-	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo, notificationRepo)
-	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
-	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
-	bandUseCase := usecase.NewBandUseCase(bandRepo, musicRepo)
-	settingUseCase := usecase.NewSettingUseCase(settingRepo)
-	notificationUseCase := usecase.NewNotificationUseCase(notificationRepo, fcmService)
-	donationUseCase := usecase.NewDonationUseCase(donationRepo, userRepo, eventRepo, paywayService)
-	supporterUseCase := usecase.NewSupporterUseCase(supporterRepo, donationRepo)
-	churchUseCase := usecase.NewChurchUseCase(churchRepo, userRepo)
-	otpUseCase := usecase.NewOTPUseCase(otpRepo, userRepo, emailService, config.OTPExpiry)
+	// Email Service (Optional)
+	var emailService email.EmailService
+	if cfg.Email.Enabled {
+		appLogger.Info("📧 Initializing email service...")
+		emailService = email.NewSMTPEmailService(&cfg.Email)
+		appLogger.Info("✅ Email service initialized")
+	} else {
+		appLogger.Info("ℹ️  Email service disabled")
+		emailService = email.NewDummyEmailService()
+	}
 
-	// Initialize handlers (Interface layer)
-	authHandler := handler.NewAuthHandler(authUseCase)
-	musicHandler := handler.NewMusicHandler(musicUseCase)
-	eventHandler := handler.NewEventHandler(eventUseCase)
-	bookingHandler := handler.NewBookingHandler(bookingUseCase)
-	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase)
-	bandHandler := handler.NewBandHandler(bandUseCase)
-	settingHandler := handler.NewSettingHandler(settingUseCase)
-	notificationHandler := handler.NewNotificationHandler(notificationUseCase)
-	deviceTokenHandler := handler.NewDeviceTokenHandler(deviceTokenRepo)
-	donationHandler := handler.NewDonationHandler(donationUseCase)
-	supporterHandler := handler.NewSupporterHandler(supporterUseCase)
-	churchHandler := handler.NewChurchHandler(churchUseCase)
-	otpHandler := handler.NewOTPHandler(otpUseCase)
+	// PayWay Service (Optional)
+	var paywayService payway.PayWayService
+	if cfg.PayWay.Enabled {
+		appLogger.Info("💳 Initializing PayWay service...")
+		paywayService = payway.NewPayWayService(&cfg.PayWay)
+		appLogger.Info("✅ PayWay service initialized")
+	} else {
+		appLogger.Info("ℹ️  PayWay service disabled")
+		paywayService = payway.NewDummyPayWayService()
+	}
 
-	// Setup router
-	r := router.NewRouter(authHandler, musicHandler, eventHandler, bookingHandler, favoriteHandler, bandHandler, settingHandler, notificationHandler, deviceTokenHandler, donationHandler, supporterHandler, churchHandler, otpHandler, authUseCase)
+	// ==================== Use Cases ====================
+	appLogger.Info("⚙️  Initializing use cases...")
+	authUseCase := usecase.NewAuthUseCase(
+		userRepo,
+		otpRepo,
+		&cfg.JWT,
+		&cfg.OAuth,
+		cacheService,
+		appLogger,
+	)
+	musicUseCase := usecase.NewMusicUseCase(
+		musicRepo,
+		cacheService,
+		appLogger,
+	)
+	eventUseCase := usecase.NewEventUseCase(
+		eventRepo,
+		musicRepo,
+		notificationRepo,
+		appLogger,
+	)
+	bookingUseCase := usecase.NewBookingUseCase(
+		bookingRepo,
+		eventRepo,
+		appLogger,
+	)
+	favoriteUseCase := usecase.NewFavoriteUseCase(
+		favoriteRepo,
+		musicRepo,
+		appLogger,
+	)
+	bandUseCase := usecase.NewBandUseCase(
+		bandRepo,
+		musicRepo,
+		appLogger,
+	)
+	settingUseCase := usecase.NewSettingUseCase(
+		settingRepo,
+		appLogger,
+	)
+	notificationUseCase := usecase.NewNotificationUseCase(
+		notificationRepo,
+		fcmService,
+		appLogger,
+	)
+	donationUseCase := usecase.NewDonationUseCase(
+		donationRepo,
+		userRepo,
+		eventRepo,
+		paywayService,
+		appLogger,
+	)
+	supporterUseCase := usecase.NewSupporterUseCase(
+		supporterRepo,
+		donationRepo,
+		appLogger,
+	)
+	churchUseCase := usecase.NewChurchUseCase(
+		churchRepo,
+		userRepo,
+		appLogger,
+	)
+	otpUseCase := usecase.NewOTPUseCase(
+		otpRepo,
+		userRepo,
+		emailService,
+		cfg.JWT.TokenExpiry,
+		appLogger,
+	)
+	appLogger.Info("✅ Use cases initialized")
+
+	// ==================== Handlers ====================
+	appLogger.Info("🎯 Initializing handlers...")
+	authHandler := handler.NewAuthHandler(authUseCase, appLogger)
+	musicHandler := handler.NewMusicHandler(musicUseCase, appLogger)
+	eventHandler := handler.NewEventHandler(eventUseCase, appLogger)
+	bookingHandler := handler.NewBookingHandler(bookingUseCase, appLogger)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase, appLogger)
+	bandHandler := handler.NewBandHandler(bandUseCase, appLogger)
+	settingHandler := handler.NewSettingHandler(settingUseCase, appLogger)
+	notificationHandler := handler.NewNotificationHandler(notificationUseCase, appLogger)
+	deviceTokenHandler := handler.NewDeviceTokenHandler(deviceTokenRepo, appLogger)
+	donationHandler := handler.NewDonationHandler(donationUseCase, appLogger)
+	supporterHandler := handler.NewSupporterHandler(supporterUseCase, appLogger)
+	churchHandler := handler.NewChurchHandler(churchUseCase, appLogger)
+	otpHandler := handler.NewOTPHandler(otpUseCase, appLogger)
+	appLogger.Info("✅ Handlers initialized")
+
+	// ==================== Router ====================
+	appLogger.Info("🛣️  Setting up routes...")
+	r := router.NewRouter(
+		authHandler,
+		musicHandler,
+		eventHandler,
+		bookingHandler,
+		favoriteHandler,
+		bandHandler,
+		settingHandler,
+		notificationHandler,
+		deviceTokenHandler,
+		donationHandler,
+		supporterHandler,
+		churchHandler,
+		otpHandler,
+		authUseCase,
+		cfg,
+		appLogger,
+	)
 	engine := r.Setup()
+	appLogger.Info("✅ Routes configured")
 
-	// Start server
-	log.Printf("🚀 Server starting on port %s", config.Port)
-	if err := engine.Run(":" + config.Port); err != nil {
-		log.Fatalf("❌ failed to start server: %v", err)
+	// ==================== HTTP Server ====================
+	srv := &http.Server{
+		Addr:           ":" + cfg.App.Port,
+		Handler:        engine,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
+
+	// Start server in goroutine
+	go func() {
+		appLogger.Info("🚀 Server starting",
+			zap.String("port", cfg.App.Port),
+			zap.String("environment", cfg.App.Environment),
+		)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			appLogger.Fatal("Failed to start server", zap.Error(err))
+		}
+	}()
+
+	// ==================== Graceful Shutdown ====================
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	appLogger.Info("🛑 Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Shutdown server
+	if err := srv.Shutdown(ctx); err != nil {
+		appLogger.Error("Server forced to shutdown", zap.Error(err))
+		return err
+	}
+
+	// Close database connection
+	sqlDB, err := db.DB()
+	if err == nil {
+		sqlDB.Close()
+	}
+
+	appLogger.Info("✅ Server gracefully stopped")
+	return nil
 }
