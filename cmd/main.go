@@ -11,81 +11,42 @@ import (
 	"time"
 
 	"github.com/suk-chanthea/ezra/config"
-	"github.com/suk-chanthea/ezra/infrastructure/cache"
 	"github.com/suk-chanthea/ezra/infrastructure/database"
 	"github.com/suk-chanthea/ezra/infrastructure/email"
 	"github.com/suk-chanthea/ezra/infrastructure/firebase"
-	"github.com/suk-chanthea/ezra/infrastructure/logger"
-	"github.com/suk-chanthea/ezra/infrastructure/payway"
+	"github.com/suk-chanthea/ezra/infrastructure/payment"
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
 	"github.com/suk-chanthea/ezra/interface/http/handler"
 	"github.com/suk-chanthea/ezra/interface/http/router"
 	"github.com/suk-chanthea/ezra/usecase"
-
-	"go.uber.org/zap"
 )
 
 func main() {
-	// Run application
 	if err := run(); err != nil {
-		log.Fatalf("Failed to start application: %v", err)
+		log.Fatalf("failed to start application: %v", err)
 	}
 }
 
 func run() error {
-	// ==================== Configuration ====================
 	log.Println("📋 Loading configuration...")
 	cfg, err := config.Load()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 
-	// ==================== Logger ====================
-	log.Println("📝 Initializing logger...")
-	if err := logger.InitLogger(cfg.App.Environment); err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
-	}
-	appLogger := logger.GetLogger()
-	appLogger.Info("Logger initialized",
-		zap.String("environment", cfg.App.Environment),
-		zap.String("version", cfg.App.Version),
-	)
-
-	// ==================== Database ====================
-	appLogger.Info("🗄️  Connecting to database...")
+	log.Println("🗄️  Connecting to database...")
 	db, err := database.NewPostgresDB(&cfg.Database)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	appLogger.Info("✅ Database connected")
-
-	// Auto-migrate if in development
-	if cfg.App.Environment == "development" {
-		appLogger.Info("Running database migrations...")
-		if err := database.AutoMigrate(db); err != nil {
-			appLogger.Warn("Failed to run migrations", zap.Error(err))
-		}
+		return fmt.Errorf("connect database: %w", err)
 	}
 
-	// ==================== Cache (Optional) ====================
-	var cacheService cache.Cache
-	if cfg.Redis.Enabled {
-		appLogger.Info("💾 Connecting to Redis...")
-		redisClient, err := cache.NewRedisClient(&cfg.Redis)
-		if err != nil {
-			appLogger.Warn("Failed to connect to Redis, continuing without cache", zap.Error(err))
-			cacheService = cache.NewNoOpCache() // Fallback to no-op cache
-		} else {
-			cacheService = cache.NewRedisCache(redisClient)
-			appLogger.Info("✅ Redis connected")
-		}
-	} else {
-		cacheService = cache.NewNoOpCache()
-		appLogger.Info("ℹ️  Cache disabled")
+	log.Println("🛠️  Running database migrations...")
+	if err := database.AutoMigrate(db); err != nil {
+		return fmt.Errorf("auto migrate: %w", err)
 	}
 
-	// ==================== Repositories ====================
-	appLogger.Info("🏗️  Initializing repositories...")
+	// Repositories
+	log.Println("🏗️  Initializing repositories...")
 	userRepo := persistence.NewUserRepository(db)
 	musicRepo := persistence.NewMusicRepository(db)
 	eventRepo := persistence.NewEventRepository(db)
@@ -99,133 +60,86 @@ func run() error {
 	donationRepo := persistence.NewDonationRepository(db)
 	supporterRepo := persistence.NewSupporterRepository(db)
 	churchRepo := persistence.NewChurchRepository(db)
-	appLogger.Info("✅ Repositories initialized")
 
-	// ==================== External Services ====================
-	
-	// Firebase (Optional)
-	var fcmService firebase.FCMService
-	if cfg.Firebase.Enabled && cfg.Firebase.CredentialsPath != "" {
-		appLogger.Info("🔥 Initializing Firebase...")
-		fcmService = firebase.NewFCMService(cfg.Firebase.CredentialsPath, deviceTokenRepo)
-		appLogger.Info("✅ Firebase initialized")
-	} else {
-		appLogger.Info("ℹ️  Firebase disabled, using dummy service")
-		fcmService = firebase.NewDummyFCMService()
-	}
-
-	// Email Service (Optional)
+	// External services
 	var emailService email.EmailService
 	if cfg.Email.Enabled {
-		appLogger.Info("📧 Initializing email service...")
-		emailService = email.NewSMTPEmailService(&cfg.Email)
-		appLogger.Info("✅ Email service initialized")
+		log.Println("📧 Initializing SMTP email service...")
+		emailService = email.NewSMTPEmailService(
+			cfg.Email.Host,
+			cfg.Email.Port,
+			cfg.Email.Username,
+			cfg.Email.Password,
+			cfg.Email.From,
+			cfg.Email.Secure,
+		)
 	} else {
-		appLogger.Info("ℹ️  Email service disabled")
 		emailService = email.NewDummyEmailService()
+		log.Println("ℹ️  Email service disabled; using dummy implementation.")
 	}
 
-	// PayWay Service (Optional)
-	var paywayService payway.PayWayService
-	if cfg.PayWay.Enabled {
-		appLogger.Info("💳 Initializing PayWay service...")
-		paywayService = payway.NewPayWayService(&cfg.PayWay)
-		appLogger.Info("✅ PayWay service initialized")
+	var fcmService firebase.FCMService
+	if cfg.Firebase.Enabled && cfg.Firebase.CredentialsPath != "" {
+		log.Println("🔥 Initializing Firebase Cloud Messaging...")
+		fcmService, err = firebase.NewFCMService(cfg.Firebase.CredentialsPath, deviceTokenRepo)
+		if err != nil {
+			log.Printf("⚠️  Failed to initialize Firebase: %v. Falling back to dummy service.", err)
+			fcmService = firebase.NewDummyFCMService()
+		}
 	} else {
-		appLogger.Info("ℹ️  PayWay service disabled")
-		paywayService = payway.NewDummyPayWayService()
+		fcmService = firebase.NewDummyFCMService()
+		log.Println("ℹ️  Firebase disabled; using dummy implementation.")
 	}
 
-	// ==================== Use Cases ====================
-	appLogger.Info("⚙️  Initializing use cases...")
-	authUseCase := usecase.NewAuthUseCase(
-		userRepo,
-		otpRepo,
-		&cfg.JWT,
-		&cfg.OAuth,
-		cacheService,
-		appLogger,
-	)
-	musicUseCase := usecase.NewMusicUseCase(
-		musicRepo,
-		cacheService,
-		appLogger,
-	)
-	eventUseCase := usecase.NewEventUseCase(
-		eventRepo,
-		musicRepo,
-		notificationRepo,
-		appLogger,
-	)
-	bookingUseCase := usecase.NewBookingUseCase(
-		bookingRepo,
-		eventRepo,
-		appLogger,
-	)
-	favoriteUseCase := usecase.NewFavoriteUseCase(
-		favoriteRepo,
-		musicRepo,
-		appLogger,
-	)
-	bandUseCase := usecase.NewBandUseCase(
-		bandRepo,
-		musicRepo,
-		appLogger,
-	)
-	settingUseCase := usecase.NewSettingUseCase(
-		settingRepo,
-		appLogger,
-	)
-	notificationUseCase := usecase.NewNotificationUseCase(
-		notificationRepo,
-		fcmService,
-		appLogger,
-	)
-	donationUseCase := usecase.NewDonationUseCase(
-		donationRepo,
-		userRepo,
-		eventRepo,
-		paywayService,
-		appLogger,
-	)
-	supporterUseCase := usecase.NewSupporterUseCase(
-		supporterRepo,
-		donationRepo,
-		appLogger,
-	)
-	churchUseCase := usecase.NewChurchUseCase(
-		churchRepo,
-		userRepo,
-		appLogger,
-	)
-	otpUseCase := usecase.NewOTPUseCase(
-		otpRepo,
-		userRepo,
-		emailService,
-		cfg.JWT.TokenExpiry,
-		appLogger,
-	)
-	appLogger.Info("✅ Use cases initialized")
+	var paywayService payment.PaywayService
+	if cfg.Payway.Enabled {
+		log.Println("💳 Initializing PayWay service...")
+		paywayService = payment.NewPaywayService(&payment.PaywayConfig{
+			MerchantID:  cfg.Payway.MerchantID,
+			APIKey:      cfg.Payway.APIKey,
+			APIUsername: cfg.Payway.APIUsername,
+			BaseURL:     cfg.Payway.BaseURL,
+			ReturnURL:   cfg.Payway.ReturnURL,
+			ContinueURL: cfg.Payway.ContinueURL,
+			CallbackURL: cfg.Payway.CallbackURL,
+		})
+	} else {
+		paywayService = payment.NewDummyPayWayService()
+		log.Println("ℹ️  PayWay disabled; using dummy implementation.")
+	}
 
-	// ==================== Handlers ====================
-	appLogger.Info("🎯 Initializing handlers...")
-	authHandler := handler.NewAuthHandler(authUseCase, appLogger)
-	musicHandler := handler.NewMusicHandler(musicUseCase, appLogger)
-	eventHandler := handler.NewEventHandler(eventUseCase, appLogger)
-	bookingHandler := handler.NewBookingHandler(bookingUseCase, appLogger)
-	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase, appLogger)
-	bandHandler := handler.NewBandHandler(bandUseCase, appLogger)
-	settingHandler := handler.NewSettingHandler(settingUseCase, appLogger)
-	notificationHandler := handler.NewNotificationHandler(notificationUseCase, appLogger)
-	deviceTokenHandler := handler.NewDeviceTokenHandler(deviceTokenRepo, appLogger)
-	donationHandler := handler.NewDonationHandler(donationUseCase, appLogger)
-	supporterHandler := handler.NewSupporterHandler(supporterUseCase, appLogger)
-	churchHandler := handler.NewChurchHandler(churchUseCase, appLogger)
-	otpHandler := handler.NewOTPHandler(otpUseCase, appLogger)
-	appLogger.Info("✅ Handlers initialized")
+	// Use cases
+	log.Println("⚙️  Initializing use cases...")
+	authUseCase := usecase.NewAuthUseCase(userRepo, otpRepo, cfg.JWT.Secret, cfg.OAuth.GoogleClientID)
+	musicUseCase := usecase.NewMusicUseCase(musicRepo)
+	eventUseCase := usecase.NewEventUseCase(eventRepo, musicRepo, notificationRepo)
+	bookingUseCase := usecase.NewBookingUseCase(bookingRepo, eventRepo)
+	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, musicRepo)
+	bandUseCase := usecase.NewBandUseCase(bandRepo, musicRepo)
+	settingUseCase := usecase.NewSettingUseCase(settingRepo)
+	notificationUseCase := usecase.NewNotificationUseCase(notificationRepo, fcmService)
+	donationUseCase := usecase.NewDonationUseCase(donationRepo, userRepo, eventRepo, paywayService)
+	supporterUseCase := usecase.NewSupporterUseCase(supporterRepo, donationRepo)
+	churchUseCase := usecase.NewChurchUseCase(churchRepo, userRepo)
+	otpUseCase := usecase.NewOTPUseCase(otpRepo, userRepo, emailService, cfg.JWT.TokenExpiry)
 
-	// ==================== Router ====================
-	appLogger.Info("🛣️  Setting up routes...")
+	// Handlers
+	log.Println("🎯 Wiring HTTP handlers...")
+	authHandler := handler.NewAuthHandler(authUseCase)
+	musicHandler := handler.NewMusicHandler(musicUseCase)
+	eventHandler := handler.NewEventHandler(eventUseCase)
+	bookingHandler := handler.NewBookingHandler(bookingUseCase)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteUseCase)
+	bandHandler := handler.NewBandHandler(bandUseCase)
+	settingHandler := handler.NewSettingHandler(settingUseCase)
+	notificationHandler := handler.NewNotificationHandler(notificationUseCase)
+	deviceTokenHandler := handler.NewDeviceTokenHandler(deviceTokenRepo)
+	donationHandler := handler.NewDonationHandler(donationUseCase)
+	supporterHandler := handler.NewSupporterHandler(supporterUseCase)
+	churchHandler := handler.NewChurchHandler(churchUseCase)
+	otpHandler := handler.NewOTPHandler(otpUseCase)
+
+	log.Println("🛣️  Configuring router...")
 	r := router.NewRouter(
 		authHandler,
 		musicHandler,
@@ -241,55 +155,48 @@ func run() error {
 		churchHandler,
 		otpHandler,
 		authUseCase,
-		cfg,
-		appLogger,
 	)
 	engine := r.Setup()
-	appLogger.Info("✅ Routes configured")
 
-	// ==================== HTTP Server ====================
-	srv := &http.Server{
-		Addr:           ":" + cfg.App.Port,
-		Handler:        engine,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		IdleTimeout:    60 * time.Second,
-		MaxHeaderBytes: 1 << 20, // 1 MB
+	addr := ":" + cfg.App.Port
+	if cfg.App.Port == "" {
+		addr = ":8080"
 	}
 
-	// Start server in goroutine
+	srv := &http.Server{
+		Addr:           addr,
+		Handler:        engine,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   15 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
 	go func() {
-		appLogger.Info("🚀 Server starting",
-			zap.String("port", cfg.App.Port),
-			zap.String("environment", cfg.App.Environment),
-		)
+		log.Printf("🚀 Server starting on %s (%s)", addr, cfg.App.Environment)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			appLogger.Fatal("Failed to start server", zap.Error(err))
+			log.Fatalf("server error: %v", err)
 		}
 	}()
 
-	// ==================== Graceful Shutdown ====================
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	appLogger.Info("🛑 Shutting down server...")
+	log.Println("🛑 Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Shutdown server
 	if err := srv.Shutdown(ctx); err != nil {
-		appLogger.Error("Server forced to shutdown", zap.Error(err))
-		return err
+		return fmt.Errorf("server shutdown: %w", err)
 	}
 
-	// Close database connection
 	sqlDB, err := db.DB()
 	if err == nil {
 		sqlDB.Close()
 	}
 
-	appLogger.Info("✅ Server gracefully stopped")
+	log.Println("✅ Shutdown complete.")
 	return nil
 }

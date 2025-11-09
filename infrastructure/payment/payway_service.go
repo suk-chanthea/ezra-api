@@ -15,13 +15,13 @@ import (
 
 // PaywayConfig holds Payway configuration
 type PaywayConfig struct {
-	MerchantID   string
-	APIKey       string
-	APIUsername  string
-	BaseURL      string // e.g., https://api-sandbox.payway.com.kh or https://api.payway.com.kh
-	ReturnURL    string // Frontend URL to return after payment
-	ContinueURL  string // Continue shopping URL
-	CallbackURL  string // Backend webhook URL
+	MerchantID  string
+	APIKey      string
+	APIUsername string
+	BaseURL     string // e.g., https://api-sandbox.payway.com.kh or https://api.payway.com.kh
+	ReturnURL   string // Frontend URL to return after payment
+	ContinueURL string // Continue shopping URL
+	CallbackURL string // Backend webhook URL
 }
 
 // PaymentMethod represents the payment method type
@@ -59,17 +59,17 @@ type PaymentResponse struct {
 
 // PaymentCallbackData represents data received from Payway webhook
 type PaymentCallbackData struct {
-	TransactionID  string `json:"tran_id"`
-	Status         string `json:"status"` // "success", "failed", "pending"
-	Amount         string `json:"amount"`
-	Currency       string `json:"currency"`
-	Hash           string `json:"hash"`
-	PaymentMethod  string `json:"payment_option"`
-	CardNumber     string `json:"card_number_mask"` // Masked card number
-	ApprovalCode   string `json:"approval_code"`
-	ResponseCode   string `json:"response_code"`
-	PaymentDate    string `json:"payment_date"`
-	BankName       string `json:"bank"`
+	TransactionID string `json:"tran_id"`
+	Status        string `json:"status"` // "success", "failed", "pending"
+	Amount        string `json:"amount"`
+	Currency      string `json:"currency"`
+	Hash          string `json:"hash"`
+	PaymentMethod string `json:"payment_option"`
+	CardNumber    string `json:"card_number_mask"` // Masked card number
+	ApprovalCode  string `json:"approval_code"`
+	ResponseCode  string `json:"response_code"`
+	PaymentDate   string `json:"payment_date"`
+	BankName      string `json:"bank"`
 }
 
 // PaywayService handles Payway payment operations
@@ -280,7 +280,7 @@ func (s *paywayService) GenerateHash(data map[string]string) string {
 	// Build string to hash (order matters!)
 	// Format: merchant_id + tran_id + amount + items + shipping + ... (check Payway docs)
 	var hashString string
-	
+
 	// Common fields in order
 	if val, ok := data["merchant_id"]; ok {
 		hashString += val
@@ -304,7 +304,7 @@ func (s *paywayService) GenerateHash(data map[string]string) string {
 	// Create HMAC
 	h := hmac.New(sha512.New, []byte(s.config.APIKey))
 	h.Write([]byte(hashString))
-	
+
 	// Return base64 encoded hash
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
@@ -335,3 +335,29 @@ func ParseAmount(amountStr string, currency string) (float64, error) {
 	return amount, nil
 }
 
+type dummyPaywayService struct{}
+
+// NewDummyPayWayService returns a no-op implementation used when PayWay is disabled.
+func NewDummyPayWayService() PaywayService {
+	return &dummyPaywayService{}
+}
+
+func (d *dummyPaywayService) InitiateQRPayment(transactionID, amount, currency, customerName, customerEmail, customerPhone, items string) (*PaymentResponse, error) {
+	return nil, errors.New("payway service disabled")
+}
+
+func (d *dummyPaywayService) InitiateCardPayment(transactionID, amount, currency, customerName, customerEmail, customerPhone, items string) (*PaymentResponse, error) {
+	return nil, errors.New("payway service disabled")
+}
+
+func (d *dummyPaywayService) CheckTransaction(transactionID string) (*TransactionStatusResponse, error) {
+	return nil, errors.New("payway service disabled")
+}
+
+func (d *dummyPaywayService) VerifyCallback(data *PaymentCallbackData) bool {
+	return false
+}
+
+func (d *dummyPaywayService) GenerateHash(data map[string]string) string {
+	return ""
+}

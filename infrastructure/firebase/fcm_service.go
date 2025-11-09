@@ -97,7 +97,7 @@ func (s *fcmService) sendBatch(ctx context.Context, tokens []string, title, body
 			},
 			Payload: &messaging.APNSPayload{
 				Aps: &messaging.Aps{
-					Sound: "default",
+					Sound:            "default",
 					ContentAvailable: true,
 				},
 			},
@@ -214,3 +214,7 @@ func (d *dummyFCMService) SendToAllExcept(ctx context.Context, excludeUserID uin
 	return nil
 }
 
+// NewDummyFCMService returns a no-op FCM service implementation.
+func NewDummyFCMService() FCMService {
+	return &dummyFCMService{}
+}
