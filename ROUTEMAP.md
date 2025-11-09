@@ -3,12 +3,14 @@
 Complete API route reference for the Ezra music management system.
 
 ## Base URL
+
 ```
 Production: http://your-domain.com
 Development: http://localhost:8080
 ```
 
-## Table of Contents  
+## Table of Contents
+
 - [Device Tokens (FCM Push Notifications)](#device-tokens-fcm-push-notifications)
 - [Authentication](#authentication)
 - [OTP Verification](#otp-verification)
@@ -30,17 +32,20 @@ Development: http://localhost:8080
 ## Authentication
 
 ### Register
+
 Create a new user account with email/password. **Requires verified OTP** for email verification.
 
 **Endpoint:** `POST /register`  
 **Authentication:** None (Public)
 
 **Prerequisites:**
+
 1. Send OTP to email: `POST /otp/send` with `purpose: "email_verification"`
 2. Verify OTP: `POST /otp/verify` with the code received
 3. Then register with the verified OTP code
 
 **Request Body:**
+
 ```json
 {
   "username": "johndoe",
@@ -52,6 +57,7 @@ Create a new user account with email/password. **Requires verified OTP** for ema
 ```
 
 **Validation Rules:**
+
 - `username`: required, min 3 chars, max 100 chars
 - `fullname`: required, min 1 char, max 100 chars
 - `email`: required, valid email format, max 100 chars
@@ -59,6 +65,7 @@ Create a new user account with email/password. **Requires verified OTP** for ema
 - `otp_code`: required, exactly 6 digits, must be verified via `/otp/verify`
 
 **Success Response (201):**
+
 ```json
 {
   "message": "user registered successfully",
@@ -67,6 +74,7 @@ Create a new user account with email/password. **Requires verified OTP** for ema
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input or validation error
 - **400 Bad Request:** Invalid or expired OTP code
 - **400 Bad Request:** OTP not verified (must call `/otp/verify` first)
@@ -93,12 +101,14 @@ Create a new user account with email/password. **Requires verified OTP** for ema
 ---
 
 ### Login
+
 Authenticate with username/email and password to get JWT token. **Optional 2FA** with OTP.
 
 **Endpoint:** `POST /login`  
 **Authentication:** None (Public)
 
 **Request Body (Basic Login):**
+
 ```json
 {
   "username": "johndoe",
@@ -107,6 +117,7 @@ Authenticate with username/email and password to get JWT token. **Optional 2FA**
 ```
 
 Or use email:
+
 ```json
 {
   "username": "john@example.com",
@@ -130,6 +141,7 @@ For extra security, optionally use OTP-based two-factor authentication:
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -137,6 +149,7 @@ For extra security, optionally use OTP-based two-factor authentication:
 ```
 
 **Error Responses:**
+
 - **401 Unauthorized:** Invalid credentials
 - **400 Bad Request:** Invalid request format
 - **400 Bad Request:** Invalid 2FA OTP code (if `otp_code` provided)
@@ -160,12 +173,14 @@ For extra security, optionally use OTP-based two-factor authentication:
 ---
 
 ### Google Login
+
 Authenticate using Google OAuth ID token.
 
 **Endpoint:** `POST /auth/google`  
 **Authentication:** None (Public)
 
 **Request Body:**
+
 ```json
 {
   "id_token": "google_id_token_here"
@@ -173,6 +188,7 @@ Authenticate using Google OAuth ID token.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -180,6 +196,7 @@ Authenticate using Google OAuth ID token.
 ```
 
 **Error Responses:**
+
 - **401 Unauthorized:** Invalid Google ID token
 - **400 Bad Request:** Invalid token format or missing claims
 
@@ -198,12 +215,14 @@ Authenticate using Google OAuth ID token.
 The system uses One-Time Password (OTP) verification for email verification, password reset, and optional two-factor authentication (2FA). OTPs are sent via Gmail SMTP and expire after 10 minutes (configurable).
 
 ### Send OTP
+
 Generate and send an OTP code to the specified email address.
 
 **Endpoint:** `POST /otp/send`  
 **Authentication:** None (Public)
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -212,15 +231,18 @@ Generate and send an OTP code to the specified email address.
 ```
 
 **Purpose Options:**
+
 - `email_verification` - Verify email before user registration
 - `password_reset` - Reset forgotten password
 - `login` - Two-factor authentication (2FA) for login
 
 **Validation Rules:**
+
 - `email`: required, valid email format
 - `purpose`: required, must be one of the allowed purposes
 
 **Success Response (200):**
+
 ```json
 {
   "message": "OTP sent successfully to your email",
@@ -230,7 +252,9 @@ Generate and send an OTP code to the specified email address.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid email format
+
 ```json
 {
   "error": "invalid email format"
@@ -238,6 +262,7 @@ Generate and send an OTP code to the specified email address.
 ```
 
 - **400 Bad Request:** Email already registered (for `email_verification` purpose only)
+
 ```json
 {
   "error": "email already registered, please login or reset password"
@@ -245,6 +270,7 @@ Generate and send an OTP code to the specified email address.
 ```
 
 - **400 Bad Request:** Email not found (for `login` and `password_reset` purposes)
+
 ```json
 {
   "error": "email not found"
@@ -252,6 +278,7 @@ Generate and send an OTP code to the specified email address.
 ```
 
 - **400 Bad Request:** Email not found (for `password_reset` purpose only)
+
 ```json
 {
   "error": "email not found"
@@ -259,6 +286,7 @@ Generate and send an OTP code to the specified email address.
 ```
 
 **Notes:**
+
 - OTP code is 6 digits
 - OTP expires after 10 minutes (default, configurable via `OTP_EXPIRY_MINUTES`)
 - Any existing unverified OTPs for the same email and purpose are deleted before sending a new one
@@ -267,12 +295,14 @@ Generate and send an OTP code to the specified email address.
 ---
 
 ### Verify OTP
+
 Verify the OTP code sent to the email address.
 
 **Endpoint:** `POST /otp/verify`  
 **Authentication:** None (Public)
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -282,11 +312,13 @@ Verify the OTP code sent to the email address.
 ```
 
 **Validation Rules:**
+
 - `email`: required, valid email format
 - `code`: required, exactly 6 digits
 - `purpose`: required, must match the OTP purpose
 
 **Success Response (200):**
+
 ```json
 {
   "message": "OTP verified successfully",
@@ -298,7 +330,9 @@ Verify the OTP code sent to the email address.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid or expired OTP
+
 ```json
 {
   "error": "invalid or expired OTP"
@@ -306,6 +340,7 @@ Verify the OTP code sent to the email address.
 ```
 
 - **400 Bad Request:** OTP already used
+
 ```json
 {
   "error": "OTP already used"
@@ -313,6 +348,7 @@ Verify the OTP code sent to the email address.
 ```
 
 - **400 Bad Request:** OTP has expired
+
 ```json
 {
   "error": "OTP has expired"
@@ -320,6 +356,7 @@ Verify the OTP code sent to the email address.
 ```
 
 **Notes:**
+
 - After successful verification, the OTP is marked as `verified = true`
 - OTP can only be verified once
 - Expired OTPs (>10 minutes old) cannot be verified
@@ -328,26 +365,30 @@ Verify the OTP code sent to the email address.
 ---
 
 ### Reset Password with OTP
+
 Reset user password using a verified OTP code.
 
 **Endpoint:** `POST /auth/reset-password`  
 **Authentication:** None (Public)
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
   "new_password": "newSecurePassword123",
-  "otp_code": "654321"
+  "otp_code": "654331"
 }
 ```
 
 **Validation Rules:**
+
 - `email`: required, valid email format
 - `new_password`: required, minimum 6 characters
 - `otp_code`: required, exactly 6 digits
 
 **Success Response (200):**
+
 ```json
 {
   "message": "password reset successfully"
@@ -355,7 +396,9 @@ Reset user password using a verified OTP code.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid OTP code
+
 ```json
 {
   "error": "invalid OTP code"
@@ -363,6 +406,7 @@ Reset user password using a verified OTP code.
 ```
 
 - **400 Bad Request:** OTP not verified
+
 ```json
 {
   "error": "OTP not verified. Please verify OTP first"
@@ -370,6 +414,7 @@ Reset user password using a verified OTP code.
 ```
 
 - **400 Bad Request:** OTP has expired
+
 ```json
 {
   "error": "OTP has expired. Please request a new one"
@@ -377,6 +422,7 @@ Reset user password using a verified OTP code.
 ```
 
 - **400 Bad Request:** User not found
+
 ```json
 {
   "error": "user not found"
@@ -384,6 +430,7 @@ Reset user password using a verified OTP code.
 ```
 
 **Notes:**
+
 - OTP must be verified (via `/otp/verify`) before using this endpoint
 - OTP purpose must be `password_reset`
 - Password is hashed using bcrypt before storage
@@ -450,7 +497,7 @@ curl -X POST http://localhost:8080/otp/verify \
   -H "Content-Type: application/json" \
   -d '{
     "email": "existing@example.com",
-    "code": "654321",
+    "code": "654331",
     "purpose": "password_reset"
   }'
 
@@ -460,7 +507,7 @@ curl -X POST http://localhost:8080/auth/reset-password \
   -d '{
     "email": "existing@example.com",
     "new_password": "newPassword123",
-    "otp_code": "654321"
+    "otp_code": "654331"
   }'
 
 # Response: Password reset successfully
@@ -520,6 +567,7 @@ OTP_EXPIRY_MINUTES=10
 ```
 
 **Gmail App Password Setup:**
+
 1. Go to https://myaccount.google.com/security
 2. Enable 2-Step Verification
 3. Go to https://myaccount.google.com/apppasswords
@@ -531,21 +579,22 @@ OTP_EXPIRY_MINUTES=10
 
 ### OTP Security Features
 
-| Feature | Description |
-|---------|-------------|
-| **Time-Limited** | OTPs expire after 10 minutes (configurable) |
-| **One-Time Use** | Cannot reuse verified OTPs |
-| **Purpose Isolation** | Email verification OTP ≠ Password reset OTP |
-| **Email Verification** | Tracked in `users.email_verified` field |
-| **Session Invalidation** | All sessions logged out on password reset |
-| **Auto Cleanup** | Old OTPs deleted when sending new ones |
-| **Bcrypt Hashing** | Secure password storage |
+| Feature                  | Description                                 |
+| ------------------------ | ------------------------------------------- |
+| **Time-Limited**         | OTPs expire after 10 minutes (configurable) |
+| **One-Time Use**         | Cannot reuse verified OTPs                  |
+| **Purpose Isolation**    | Email verification OTP ≠ Password reset OTP |
+| **Email Verification**   | Tracked in `users.email_verified` field     |
+| **Session Invalidation** | All sessions logged out on password reset   |
+| **Auto Cleanup**         | Old OTPs deleted when sending new ones      |
+| **Bcrypt Hashing**       | Secure password storage                     |
 
 ---
 
 ### OTP Email Template
 
 The OTP email includes:
+
 - Professional header with branding
 - Clear purpose message (email verification, password reset, or login)
 - Large, easy-to-read 6-digit code
@@ -558,6 +607,7 @@ The OTP email includes:
 ### OTP Database Schema
 
 **OTPs Table:**
+
 ```sql
 CREATE TABLE otps (
     id SERIAL PRIMARY KEY,
@@ -578,6 +628,7 @@ CREATE INDEX idx_otps_email_purpose ON otps(email, purpose);
 ```
 
 **Users Table (Email Verification):**
+
 ```sql
 ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
 ```
@@ -587,6 +638,7 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
 ### OTP Best Practices
 
 **Security:**
+
 - ✅ Always validate email format
 - ✅ Check OTP expiration before use
 - ✅ Verify OTP purpose matches intended action
@@ -595,6 +647,7 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
 - ✅ Use HTTPS in production
 
 **User Experience:**
+
 - ✅ Show countdown timer (10 minutes)
 - ✅ Provide "Resend OTP" option
 - ✅ Clear error messages
@@ -602,6 +655,7 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
 - ✅ Mobile-friendly email design
 
 **Production:**
+
 - ✅ Implement rate limiting (max 3 OTPs per hour per email)
 - ✅ Monitor failed verification attempts
 - ✅ Log OTP operations for security audits
@@ -613,17 +667,20 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT false;
 ## User Management
 
 ### Logout
+
 Invalidate the current user's JWT token.
 
 **Endpoint:** `POST /api/logout`  
 **Authentication:** Required (Bearer Token)
 
 **Headers:**
+
 ```
 Authorization: Bearer <your_jwt_token>
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "logged out successfully"
@@ -631,23 +688,27 @@ Authorization: Bearer <your_jwt_token>
 ```
 
 **Error Responses:**
+
 - **401 Unauthorized:** User not authenticated
 - **400 Bad Request:** Logout failed
 
 ---
 
 ### Delete User
+
 Delete the current user's account and all associated data.
 
 **Endpoint:** `DELETE /api/user`  
 **Authentication:** Required (Bearer Token)
 
 **Headers:**
+
 ```
 Authorization: Bearer <your_jwt_token>
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "user deleted successfully"
@@ -655,6 +716,7 @@ Authorization: Bearer <your_jwt_token>
 ```
 
 **Error Responses:**
+
 - **401 Unauthorized:** User not authenticated
 - **400 Bad Request:** Deletion failed
 
@@ -665,18 +727,21 @@ Authorization: Bearer <your_jwt_token>
 ## Music
 
 ### Create Music
+
 Add a new music track to the system.
 
 **Endpoint:** `POST /api/musics`  
 **Authentication:** Required (Bearer Token)
 
 **Headers:**
+
 ```
 Authorization: Bearer <your_jwt_token>
 Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "Amazing Grace",
@@ -693,6 +758,7 @@ Content-Type: application/json
 ```
 
 **Validation Rules:**
+
 - `title`: required, min 1 char, max 255 chars
 - `artist`: optional, max 255 chars
 - `album`: optional, max 255 chars
@@ -705,6 +771,7 @@ Content-Type: application/json
 - `description`: optional, text
 
 **Success Response (201):**
+
 ```json
 {
   "message": "music created successfully"
@@ -712,26 +779,31 @@ Content-Type: application/json
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input or validation error
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Get All Music
+
 Retrieve all music tracks with optional pagination.
 
 **Endpoint:** `GET /api/musics`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1) - Page number
 - `page_size` (optional, default: 20, max: 100) - Items per page
 
 **Examples:**
+
 - Get all: `GET /api/musics`
 - With pagination: `GET /api/musics?page=1&page_size=20`
 
 **Success Response (200) - Paginated:**
+
 ```json
 {
   "data": [
@@ -764,6 +836,7 @@ Retrieve all music tracks with optional pagination.
 ```
 
 **Success Response (200) - All Results:**
+
 ```json
 [
   {
@@ -788,12 +861,14 @@ Retrieve all music tracks with optional pagination.
 ---
 
 ### Get User's Music
+
 Retrieve all music tracks created by the authenticated user.
 
 **Endpoint:** `GET /api/musics/user`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 [
   {
@@ -816,21 +891,25 @@ Retrieve all music tracks created by the authenticated user.
 ```
 
 **Error Responses:**
+
 - **401 Unauthorized:** User not authenticated
 - **500 Internal Server Error:** Server error
 
 ---
 
 ### Get Music by ID
+
 Retrieve a specific music track by its ID.
 
 **Endpoint:** `GET /api/musics/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 1,
@@ -851,6 +930,7 @@ Retrieve a specific music track by its ID.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid ID format
 - **404 Not Found:** Music not found
 
@@ -863,15 +943,18 @@ Retrieve a specific music track by its ID.
 ---
 
 ### Update Music
+
 Update an existing music track. Only the owner can update.
 
 **Endpoint:** `PUT /api/musics/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "title": "Amazing Grace (Updated)",
@@ -888,6 +971,7 @@ Update an existing music track. Only the owner can update.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music updated successfully"
@@ -895,6 +979,7 @@ Update an existing music track. Only the owner can update.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input or user doesn't own this music
 - **401 Unauthorized:** User not authenticated
 - **404 Not Found:** Music not found
@@ -902,15 +987,18 @@ Update an existing music track. Only the owner can update.
 ---
 
 ### Delete Music
+
 Delete a music track. Only the owner can delete.
 
 **Endpoint:** `DELETE /api/musics/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music deleted successfully"
@@ -918,6 +1006,7 @@ Delete a music track. Only the owner can delete.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid ID or user doesn't own this music
 - **401 Unauthorized:** User not authenticated
 - **404 Not Found:** Music not found
@@ -927,6 +1016,7 @@ Delete a music track. Only the owner can delete.
 ## Events
 
 ### Create Event
+
 Create a new event with optional music tracks.
 
 **Endpoint:** `POST /api/events`  
@@ -935,6 +1025,7 @@ Create a new event with optional music tracks.
 **Note:** Creating an event automatically sends a broadcast notification to all users informing them about the new event. The event creator will not receive the notification themselves.
 
 **Request Body:**
+
 ```json
 {
   "title": "Sunday Worship Service",
@@ -948,6 +1039,7 @@ Create a new event with optional music tracks.
 ```
 
 **Validation Rules:**
+
 - `title`: required, min 1 char, max 255 chars
 - `content`: optional, text
 - `cover`: optional, max 255 chars
@@ -957,6 +1049,7 @@ Create a new event with optional music tracks.
 - `music_ids`: optional, array of music IDs
 
 **Success Response (201):**
+
 ```json
 {
   "id": 1,
@@ -984,12 +1077,14 @@ Create a new event with optional music tracks.
 ---
 
 ### Get All Events
+
 Retrieve all events with optional pagination.
 
 **Endpoint:** `GET /api/events`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20, max: 100)
 
@@ -998,12 +1093,14 @@ Retrieve all events with optional pagination.
 ---
 
 ### Get User's Events
+
 Retrieve events created by the authenticated user.
 
 **Endpoint:** `GET /api/events/user`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
@@ -1012,12 +1109,14 @@ Retrieve events created by the authenticated user.
 ---
 
 ### Get Event by ID
+
 Retrieve a specific event with its associated music tracks.
 
 **Endpoint:** `GET /api/events/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Event ID (integer)
 
 **Success Response (200):** Returns event details including all associated music tracks.
@@ -1025,12 +1124,14 @@ Retrieve a specific event with its associated music tracks.
 ---
 
 ### Update Event
+
 Update an existing event. Only the owner can update.
 
 **Endpoint:** `PUT /api/events/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Event ID (integer)
 
 **Request Body:** Same format as Create Event
@@ -1040,15 +1141,18 @@ Update an existing event. Only the owner can update.
 ---
 
 ### Delete Event
+
 Delete an event. Only the owner can delete.
 
 **Endpoint:** `DELETE /api/events/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Event ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "event deleted successfully"
@@ -1060,12 +1164,14 @@ Delete an event. Only the owner can delete.
 ## Bookings
 
 ### Create Booking
+
 Register/book attendance for an event.
 
 **Endpoint:** `POST /api/bookings`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "event_id": 1,
@@ -1074,6 +1180,7 @@ Register/book attendance for an event.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "id": 1,
@@ -1087,30 +1194,35 @@ Register/book attendance for an event.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input or duplicate booking
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Get All Bookings
+
 Retrieve all bookings in the system (typically admin use).
 
 **Endpoint:** `GET /api/bookings`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20)
 
 ---
 
 ### Get User's Bookings
+
 Retrieve all bookings made by the authenticated user.
 
 **Endpoint:** `GET /api/bookings/user`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
@@ -1119,41 +1231,49 @@ Retrieve all bookings made by the authenticated user.
 ---
 
 ### Get Bookings by Event
+
 Retrieve all bookings for a specific event.
 
 **Endpoint:** `GET /api/bookings/event/:event_id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `event_id` (required) - Event ID (integer)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 ---
 
 ### Get Booking by ID
+
 Retrieve a specific booking.
 
 **Endpoint:** `GET /api/bookings/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Booking ID (integer)
 
 ---
 
 ### Update Booking
+
 Update booking status or notes.
 
 **Endpoint:** `PUT /api/bookings/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Booking ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "status": "confirmed",
@@ -1162,6 +1282,7 @@ Update booking status or notes.
 ```
 
 **Valid Status Values:**
+
 - `pending` - Awaiting confirmation
 - `confirmed` - Attendance confirmed
 - `cancelled` - Booking cancelled
@@ -1171,15 +1292,18 @@ Update booking status or notes.
 ---
 
 ### Delete Booking
+
 Cancel/delete a booking. Only the booking owner can delete.
 
 **Endpoint:** `DELETE /api/bookings/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Booking ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "booking deleted successfully"
@@ -1191,16 +1315,19 @@ Cancel/delete a booking. Only the booking owner can delete.
 ## Favorites
 
 ### Get User's Favorites
+
 Retrieve all music tracks favorited by the authenticated user.
 
 **Endpoint:** `GET /api/favorites`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20)
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -1235,15 +1362,18 @@ Retrieve all music tracks favorited by the authenticated user.
 ---
 
 ### Add to Favorites
+
 Add a music track to the user's favorites list.
 
 **Endpoint:** `POST /api/favorites/music/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music added to favorites"
@@ -1251,21 +1381,25 @@ Add a music track to the user's favorites list.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Music already in favorites or music doesn't exist
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Remove from Favorites
+
 Remove a music track from the user's favorites list.
 
 **Endpoint:** `DELETE /api/favorites/music/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music removed from favorites"
@@ -1273,21 +1407,25 @@ Remove a music track from the user's favorites list.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Music not in favorites
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Check if Favorite
+
 Check whether a specific music track is in the user's favorites.
 
 **Endpoint:** `GET /api/favorites/music/:id/check`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "is_favorite": true
@@ -1295,6 +1433,7 @@ Check whether a specific music track is in the user's favorites.
 ```
 
 Or:
+
 ```json
 {
   "is_favorite": false
@@ -1304,15 +1443,18 @@ Or:
 ---
 
 ### Get Favorite Count
+
 Get the total number of users who have favorited a specific music track.
 
 **Endpoint:** `GET /api/favorites/music/:id/count`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "count": 42
@@ -1326,12 +1468,14 @@ Get the total number of users who have favorited a specific music track.
 ## Bands
 
 ### Create Band
+
 Create a new band/music collection/library.
 
 **Endpoint:** `POST /api/bands`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "name": "Worship Team A",
@@ -1342,12 +1486,14 @@ Create a new band/music collection/library.
 ```
 
 **Validation Rules:**
+
 - `name`: required, min 1 char, max 255 chars
 - `description`: optional, text
 - `cover`: optional, max 255 chars
 - `is_public`: optional, boolean (default: false)
 
 **Success Response (201):**
+
 ```json
 {
   "id": 1,
@@ -1364,12 +1510,14 @@ Create a new band/music collection/library.
 ---
 
 ### Get All Bands
+
 Retrieve all bands with pagination.
 
 **Endpoint:** `GET /api/bands`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20)
 
@@ -1378,36 +1526,42 @@ Retrieve all bands with pagination.
 ---
 
 ### Get User's Bands
+
 Retrieve bands created by the authenticated user.
 
 **Endpoint:** `GET /api/bands/user`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 ---
 
 ### Get Public Bands
+
 Retrieve all public bands (bands with `is_public = true`).
 
 **Endpoint:** `GET /api/bands/public`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 ---
 
 ### Get Band by ID
+
 Retrieve a specific band's details.
 
 **Endpoint:** `GET /api/bands/:id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Success Response (200):** Returns band details.
@@ -1415,12 +1569,14 @@ Retrieve a specific band's details.
 ---
 
 ### Update Band
+
 Update band information. Only the owner can update.
 
 **Endpoint:** `PUT /api/bands/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Request Body:** Same format as Create Band
@@ -1430,15 +1586,18 @@ Update band information. Only the owner can update.
 ---
 
 ### Delete Band
+
 Delete a band. Only the owner can delete.
 
 **Endpoint:** `DELETE /api/bands/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "band deleted successfully"
@@ -1448,15 +1607,18 @@ Delete a band. Only the owner can delete.
 ---
 
 ### Get Band Music
+
 Retrieve all music tracks in a specific band.
 
 **Endpoint:** `GET /api/bands/:id/musics`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -1483,15 +1645,18 @@ Retrieve all music tracks in a specific band.
 ---
 
 ### Add Music to Band
+
 Add one or more music tracks to a band. Only the owner can add.
 
 **Endpoint:** `POST /api/bands/:id/musics`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "music_ids": [1, 2, 3, 4, 5]
@@ -1499,6 +1664,7 @@ Add one or more music tracks to a band. Only the owner can add.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music added to band successfully"
@@ -1506,22 +1672,26 @@ Add one or more music tracks to a band. Only the owner can add.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input, music doesn't exist, or already in band
 - **401 Unauthorized:** User not authenticated or not band owner
 
 ---
 
 ### Remove Music from Band
+
 Remove a music track from a band. Only the owner can remove.
 
 **Endpoint:** `DELETE /api/bands/:id/musics/:music_id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 - `music_id` (required) - Music ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music removed from band"
@@ -1531,15 +1701,18 @@ Remove a music track from a band. Only the owner can remove.
 ---
 
 ### Reorder Band Music
+
 Change the display order of music tracks in a band. Only the owner can reorder.
 
 **Endpoint:** `PUT /api/bands/:id/musics/reorder`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "music_orders": [
@@ -1552,6 +1725,7 @@ Change the display order of music tracks in a band. Only the owner can reorder.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "music order updated successfully"
@@ -1563,15 +1737,18 @@ Change the display order of music tracks in a band. Only the owner can reorder.
 ---
 
 ### Get Band Members
+
 Retrieve all users who are members of a specific band.
 
 **Endpoint:** `GET /api/bands/:id/members`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Band ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -1597,6 +1774,7 @@ Retrieve all users who are members of a specific band.
 Support donations and sponsorships with integrated Payway by ABA payment processing.
 
 ### Features
+
 - **Two donation types**: `donate` (QR payment) and `sponsor` (Card payment)
 - **Two donor types**: `user` (authenticated) and `company` (anonymous)
 - **One-call payment**: Create donation and get payment info immediately
@@ -1608,17 +1786,19 @@ Support donations and sponsorships with integrated Payway by ABA payment process
 ---
 
 ### Create Donation (One-Step Payment)
+
 Create a donation and optionally get payment info immediately.
 
 **Endpoint:** `POST /donations`  
 **Authentication:** Optional (Required for user donations, public for company donations)
 
 **Request Body (User Donation with QR Payment):**
+
 ```json
 {
   "type": "donate",
   "donor_type": "user",
-  "amount": 50.00,
+  "amount": 50.0,
   "currency": "USD",
   "message": "Happy to support!",
   "event_id": 5,
@@ -1627,6 +1807,7 @@ Create a donation and optionally get payment info immediately.
 ```
 
 **Request Body (Company Sponsorship with Card Payment):**
+
 ```json
 {
   "type": "sponsor",
@@ -1634,7 +1815,7 @@ Create a donation and optionally get payment info immediately.
   "company_name": "Tech Solutions Ltd",
   "company_email": "sponsor@techsolutions.com",
   "company_phone": "+855123456789",
-  "amount": 5000.00,
+  "amount": 5000.0,
   "currency": "USD",
   "message": "Proud to sponsor this event!",
   "event_id": 5,
@@ -1643,12 +1824,13 @@ Create a donation and optionally get payment info immediately.
 ```
 
 **Request Body (Using Supporter Profile):**
+
 ```json
 {
   "type": "sponsor",
   "donor_type": "company",
   "supporter_id": 1,
-  "amount": 5000.00,
+  "amount": 5000.0,
   "currency": "USD",
   "message": "Proud to sponsor this event!",
   "event_id": 5,
@@ -1657,6 +1839,7 @@ Create a donation and optionally get payment info immediately.
 ```
 
 **Validation Rules:**
+
 - `type`: required, `donate` or `sponsor`
 - `donor_type`: required, `user`, `company`, `organization`, or `church`
 - `amount`: required, must be > 0
@@ -1670,6 +1853,7 @@ Create a donation and optionally get payment info immediately.
 - `company_phone`: optional
 
 **Success Response (201) - QR Payment:**
+
 ```json
 {
   "message": "donation created successfully. Please scan the QR code to complete payment",
@@ -1677,7 +1861,7 @@ Create a donation and optionally get payment info immediately.
     "id": 123,
     "type": "donate",
     "donor_type": "user",
-    "amount": 50.00,
+    "amount": 50.0,
     "currency": "USD",
     "message": "Happy to support!",
     "status": "pending",
@@ -1698,6 +1882,7 @@ Create a donation and optionally get payment info immediately.
 ```
 
 **Success Response (201) - Card Payment:**
+
 ```json
 {
   "message": "donation created successfully. Please complete payment via the provided URL",
@@ -1706,7 +1891,7 @@ Create a donation and optionally get payment info immediately.
     "type": "sponsor",
     "donor_type": "company",
     "company_name": "Tech Solutions Ltd",
-    "amount": 5000.00,
+    "amount": 5000.0,
     "currency": "USD",
     "status": "pending",
     "event_id": 5,
@@ -1724,39 +1909,46 @@ Create a donation and optionally get payment info immediately.
 ```
 
 **Payment Methods by Type:**
+
 - `donate` → QR Code payment (KHQR via ABA/Wing/Bakong)
 - `sponsor` → Visa/Mastercard payment (redirects to Payway)
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input or validation error
 - **401 Unauthorized:** User authentication required for user donations
 
 ---
 
 ### Initiate Payment (Separate Step)
+
 Generate payment info for an existing donation.
 
 **Endpoint:** `POST /donations/:id/pay`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Donation ID (integer)
 
 **Success Response (200):** Same as payment_info above
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid ID or payment already completed
 - **404 Not Found:** Donation not found
 
 ---
 
 ### Get All Donations
+
 Retrieve donations with filtering and pagination.
 
 **Endpoint:** `GET /donations`  
 **Authentication:** None (Public)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20, max: 100)
 - `type` (optional) - Filter by: `donate` or `sponsor`
@@ -1765,12 +1957,14 @@ Retrieve donations with filtering and pagination.
 - `event_id` (optional) - Filter by event ID
 
 **Examples:**
+
 - All donations: `GET /donations`
 - Company sponsors: `GET /donations?donor_type=company&type=sponsor`
 - Event donations: `GET /donations?event_id=5`
 - Completed only: `GET /donations?status=completed`
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -1779,7 +1973,7 @@ Retrieve donations with filtering and pagination.
       "type": "donate",
       "donor_type": "user",
       "user_id": 5,
-      "amount": 50.00,
+      "amount": 50.0,
       "currency": "USD",
       "message": "Happy to support!",
       "status": "completed",
@@ -1804,15 +1998,18 @@ Retrieve donations with filtering and pagination.
 ---
 
 ### Get Donation by ID
+
 Retrieve a specific donation with full details.
 
 **Endpoint:** `GET /donations/:id`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Donation ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 123,
@@ -1825,7 +2022,7 @@ Retrieve a specific donation with full details.
     "fullname": "John Doe",
     "email": "john@example.com"
   },
-  "amount": 50.00,
+  "amount": 50.0,
   "currency": "USD",
   "message": "Happy to support!",
   "status": "completed",
@@ -1843,35 +2040,42 @@ Retrieve a specific donation with full details.
 ```
 
 **Error Responses:**
+
 - **404 Not Found:** Donation not found
 
 ---
 
 ### Get Donations by Type
+
 Retrieve donations filtered by type.
 
 **Endpoint:** `GET /donations/type/:type`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `type` (required) - `donate` or `sponsor`
 
 **Query Parameters:**
+
 - `limit` (optional, default: 20)
 - `offset` (optional, default: 0)
 
 ---
 
 ### Get Donations by Event
+
 Retrieve all donations for a specific event.
 
 **Endpoint:** `GET /donations/event/:event_id`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `event_id` (required) - Event ID (integer)
 
 **Query Parameters:**
+
 - `limit` (optional, default: 20)
 - `offset` (optional, default: 0)
 
@@ -1880,12 +2084,14 @@ Retrieve all donations for a specific event.
 ---
 
 ### Get User's Donations
+
 Retrieve donations made by the authenticated user.
 
 **Endpoint:** `GET /api/donations/user`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `limit` (optional, default: 20)
 - `offset` (optional, default: 0)
 
@@ -1894,19 +2100,21 @@ Retrieve donations made by the authenticated user.
 ---
 
 ### Get Donation Statistics
+
 Get overall donation statistics.
 
 **Endpoint:** `GET /donations/stats`  
 **Authentication:** None (Public)
 
 **Success Response (200):**
+
 ```json
 {
-  "total_amount": 15000.00,
+  "total_amount": 15000.0,
   "total_donations": 45,
   "total_sponsors": 12,
-  "donate_amount": 8000.00,
-  "sponsor_amount": 7000.00,
+  "donate_amount": 8000.0,
+  "sponsor_amount": 7000.0,
   "user_donations": 38,
   "company_donations": 19
 }
@@ -1915,22 +2123,25 @@ Get overall donation statistics.
 ---
 
 ### Get Event Donation Statistics
+
 Get donation statistics for a specific event.
 
 **Endpoint:** `GET /donations/event/:event_id/stats`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `event_id` (required) - Event ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
-  "total_amount": 7550.00,
+  "total_amount": 7550.0,
   "total_donations": 15,
   "total_sponsors": 3,
-  "donate_amount": 375.00,
-  "sponsor_amount": 7175.00,
+  "donate_amount": 375.0,
+  "sponsor_amount": 7175.0,
   "user_donations": 12,
   "company_donations": 6
 }
@@ -1939,15 +2150,18 @@ Get donation statistics for a specific event.
 ---
 
 ### Check QR Status
+
 Check if QR code is still valid and payment status.
 
 **Endpoint:** `GET /donations/:id/status`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Donation ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "donation_id": 123,
@@ -1961,15 +2175,18 @@ Check if QR code is still valid and payment status.
 ---
 
 ### Regenerate QR Code
+
 Generate a new QR code if the previous one expired.
 
 **Endpoint:** `POST /donations/:id/regenerate-qr`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Donation ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "QR code regenerated successfully",
@@ -1982,20 +2199,24 @@ Generate a new QR code if the previous one expired.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Not a QR payment or already completed
 
 ---
 
 ### Update Donation Status
+
 Update payment status (typically called by payment webhook).
 
 **Endpoint:** `PUT /api/donations/:id/status`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Donation ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "status": "completed",
@@ -2005,12 +2226,14 @@ Update payment status (typically called by payment webhook).
 ```
 
 **Valid Status Values:**
+
 - `pending` - Payment not yet processed
 - `completed` - Payment successful
 - `failed` - Payment failed
 - `refunded` - Payment was refunded
 
 **Success Response (200):**
+
 ```json
 {
   "message": "donation status updated successfully"
@@ -2020,15 +2243,18 @@ Update payment status (typically called by payment webhook).
 ---
 
 ### Delete Donation
+
 Delete a pending donation (only owner can delete).
 
 **Endpoint:** `DELETE /api/donations/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Donation ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "donation deleted successfully"
@@ -2036,18 +2262,21 @@ Delete a pending donation (only owner can delete).
 ```
 
 **Error Responses:**
+
 - **401 Unauthorized:** User not authenticated
 - **400 Bad Request:** Cannot delete completed donations
 
 ---
 
 ### Payway Webhook (Internal)
+
 Webhook endpoint for Payway payment callbacks.
 
 **Endpoint:** `POST /webhooks/payway`  
 **Authentication:** None (Called by Payway)
 
 **Request Body:**
+
 ```json
 {
   "tran_id": "DON-123-1705318200",
@@ -2059,6 +2288,7 @@ Webhook endpoint for Payway payment callbacks.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "webhook processed successfully"
@@ -2072,26 +2302,28 @@ Webhook endpoint for Payway payment callbacks.
 ### Donation Use Cases
 
 #### Use Case 1: General App Support
+
 Donate to support the app (no event_id)
 
 ```json
 {
   "type": "donate",
   "donor_type": "user",
-  "amount": 10.00,
+  "amount": 10.0,
   "currency": "USD",
   "initiate_payment": true
 }
 ```
 
 #### Use Case 2: Event Participation
+
 Pay to join a specific event (with event_id)
 
 ```json
 {
   "type": "donate",
   "donor_type": "user",
-  "amount": 25.00,
+  "amount": 25.0,
   "currency": "USD",
   "event_id": 5,
   "initiate_payment": true
@@ -2099,6 +2331,7 @@ Pay to join a specific event (with event_id)
 ```
 
 #### Use Case 3: Company Event Sponsorship
+
 Company sponsors an event with card payment
 
 ```json
@@ -2107,7 +2340,7 @@ Company sponsors an event with card payment
   "donor_type": "company",
   "company_name": "Global Bank",
   "company_email": "events@globalbank.com",
-  "amount": 5000.00,
+  "amount": 5000.0,
   "currency": "USD",
   "event_id": 5,
   "initiate_payment": true
@@ -2121,6 +2354,7 @@ Company sponsors an event with card payment
 Manage company, organization, and church donor profiles with normalized information and donation tracking.
 
 ### Features
+
 - **Three supporter types**: `company`, `organization`, and `church`
 - Linked to user accounts for management
 - Normalized donor information (eliminates duplicate company data)
@@ -2130,12 +2364,14 @@ Manage company, organization, and church donor profiles with normalized informat
 ---
 
 ### Create Supporter
+
 Create a new supporter profile (company, organization, or church).
 
 **Endpoint:** `POST /api/supporters`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "name": "Tech Solutions Ltd",
@@ -2150,6 +2386,7 @@ Create a new supporter profile (company, organization, or church).
 ```
 
 **Validation Rules:**
+
 - `name`: required, min 1 char, max 255 chars
 - `email`: required, valid email, max 255 chars, unique
 - `phone`: optional, max 50 chars
@@ -2160,6 +2397,7 @@ Create a new supporter profile (company, organization, or church).
 - `description`: optional, text
 
 **Success Response (201):**
+
 ```json
 {
   "message": "supporter created successfully",
@@ -2183,12 +2421,14 @@ Create a new supporter profile (company, organization, or church).
 ---
 
 ### Get All Supporters
+
 Retrieve all supporters with pagination.
 
 **Endpoint:** `GET /supporters`  
 **Authentication:** None (Public)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20, max: 100)
 
@@ -2197,15 +2437,18 @@ Retrieve all supporters with pagination.
 ---
 
 ### Get Supporter by ID
+
 Retrieve a specific supporter's details.
 
 **Endpoint:** `GET /supporters/:id`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Supporter ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 1,
@@ -2226,42 +2469,50 @@ Retrieve a specific supporter's details.
 ---
 
 ### Get Supporters by Type
+
 Filter supporters by type (company, organization, or church).
 
 **Endpoint:** `GET /supporters/type/:type`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `type` (required) - `company`, `organization`, or `church`
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 ---
 
 ### Get User's Supporters
+
 Retrieve supporters managed by the authenticated user.
 
 **Endpoint:** `GET /api/supporters/user`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 ---
 
 ### Get Supporter Stats
+
 Get donation statistics for a specific supporter.
 
 **Endpoint:** `GET /api/supporters/:id/stats`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `id` (required) - Supporter ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 1,
@@ -2269,7 +2520,7 @@ Get donation statistics for a specific supporter.
   "email": "contact@techsolutions.com",
   "type": "company",
   "total_donations": 15,
-  "total_amount": 75000.00,
+  "total_amount": 75000.0,
   "created_at": "2024-01-15T10:30:00Z",
   "updated_at": "2024-01-15T10:30:00Z"
 }
@@ -2278,47 +2529,57 @@ Get donation statistics for a specific supporter.
 ---
 
 ### Search Supporters by Email
+
 Search for supporters by email address.
 
 **Endpoint:** `GET /supporters/search?email=contact@techsolutions.com`  
 **Authentication:** None (Public)
 
 **Query Parameters:**
+
 - `email` (required) - Email address to search
 
 ---
 
 ### Update Supporter
+
 Update supporter information. Only the managing user can update.
 
 **Endpoint:** `PUT /api/supporters/:id`  
 **Authentication:** Required (Bearer Token, must be manager)
 
 **Path Parameters:**
+
 - `id` (required) - Supporter ID (integer)
 
 **Request Body:** Same format as Create Supporter
 
 **Success Response (200):**
+
 ```json
 {
   "message": "supporter updated successfully",
-  "data": { /* updated supporter */ }
+  "data": {
+    /* updated supporter */
+  }
 }
 ```
 
 ---
 
 ### Delete Supporter
+
 Delete a supporter profile. Only the managing user can delete.
 
 **Endpoint:** `DELETE /api/supporters/:id`  
 **Authentication:** Required (Bearer Token, must be manager)
 
 **Path Parameters:**
+
 - `id` (required) - Supporter ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "supporter deleted successfully"
@@ -2332,6 +2593,7 @@ Delete a supporter profile. Only the managing user can delete.
 Manage church profiles with member approval system. Users can join churches and church owners can approve/reject membership requests.
 
 ### Features
+
 - **Church Profiles**: Complete information including pastor, denomination, established date
 - **Ownership System**: Creator becomes church owner automatically
 - **Membership Approval**: Pending → Approved/Rejected workflow
@@ -2341,17 +2603,19 @@ Manage church profiles with member approval system. Users can join churches and 
 ---
 
 ### Create Church
+
 Create a new church profile (user becomes owner).
 
 **Endpoint:** `POST /api/churches`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "fullname": "Grace Baptist Church",
   "address": "456 Church Ave, Phnom Penh",
-  "phone": "+855987654321",
+  "phone": "+855987654331",
   "email": "contact@gracebaptist.org",
   "website": "https://gracebaptist.org",
   "pastor_name": "Rev. John Smith",
@@ -2363,6 +2627,7 @@ Create a new church profile (user becomes owner).
 ```
 
 **Validation Rules:**
+
 - `fullname`: required, min 1 char, max 255 chars, unique
 - `address`: optional, text
 - `phone`: optional, max 50 chars
@@ -2375,6 +2640,7 @@ Create a new church profile (user becomes owner).
 - `denomination`: optional, max 100 chars
 
 **Success Response (201):**
+
 ```json
 {
   "message": "church created successfully",
@@ -2382,7 +2648,7 @@ Create a new church profile (user becomes owner).
     "id": 1,
     "fullname": "Grace Baptist Church",
     "address": "456 Church Ave, Phnom Penh",
-    "phone": "+855987654321",
+    "phone": "+855987654331",
     "email": "contact@gracebaptist.org",
     "website": "https://gracebaptist.org",
     "pastor_name": "Rev. John Smith",
@@ -2402,12 +2668,14 @@ Create a new church profile (user becomes owner).
 ---
 
 ### Get All Churches
+
 Retrieve all churches with pagination.
 
 **Endpoint:** `GET /churches`  
 **Authentication:** None (Public)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20, max: 100)
 
@@ -2416,21 +2684,24 @@ Retrieve all churches with pagination.
 ---
 
 ### Get Church by ID
+
 Retrieve a specific church's details including member counts.
 
 **Endpoint:** `GET /churches/:id`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Church ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 1,
   "fullname": "Grace Baptist Church",
   "address": "456 Church Ave, Phnom Penh",
-  "phone": "+855987654321",
+  "phone": "+855987654331",
   "email": "contact@gracebaptist.org",
   "website": "https://gracebaptist.org",
   "pastor_name": "Rev. John Smith",
@@ -2455,15 +2726,18 @@ Retrieve a specific church's details including member counts.
 ---
 
 ### Get Churches by Denomination
+
 Filter churches by denomination.
 
 **Endpoint:** `GET /churches/denomination/:denomination`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `denomination` (required) - Denomination name (e.g., Baptist, Catholic, Presbyterian)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
@@ -2472,19 +2746,23 @@ Filter churches by denomination.
 ---
 
 ### Get Church Members
+
 Retrieve approved members of a church.
 
 **Endpoint:** `GET /churches/:id/members`  
 **Authentication:** None (Public)
 
 **Path Parameters:**
+
 - `id` (required) - Church ID (integer)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -2513,12 +2791,14 @@ Retrieve approved members of a church.
 ---
 
 ### Join Church
+
 Request to join a church (status: pending, awaits owner approval).
 
 **Endpoint:** `POST /api/churches/join`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "church_id": 1
@@ -2526,6 +2806,7 @@ Request to join a church (status: pending, awaits owner approval).
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "church join request submitted. Waiting for owner approval"
@@ -2533,10 +2814,12 @@ Request to join a church (status: pending, awaits owner approval).
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** User already in a church or church not found
 - **401 Unauthorized:** User not authenticated
 
 **Notes:**
+
 - User can only be in one church at a time
 - Must leave current church before joining another
 - Join request starts with status "pending"
@@ -2544,12 +2827,14 @@ Request to join a church (status: pending, awaits owner approval).
 ---
 
 ### Leave Church
+
 Leave your current church.
 
 **Endpoint:** `POST /api/churches/leave`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "left church successfully"
@@ -2557,24 +2842,29 @@ Leave your current church.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** User not in any church
 
 ---
 
 ### Get Pending Members (Owner Only)
+
 View pending membership requests for your church.
 
 **Endpoint:** `GET /api/churches/:id/pending`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Church ID (integer)
 
 **Query Parameters:**
+
 - `page` (optional)
 - `page_size` (optional)
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -2600,20 +2890,24 @@ View pending membership requests for your church.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Not church owner or church not found
 
 ---
 
 ### Approve/Reject Member (Owner Only)
+
 Approve or reject a pending membership request.
 
 **Endpoint:** `POST /api/churches/:id/approve`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Church ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "user_id": 15,
@@ -2622,10 +2916,12 @@ Approve or reject a pending membership request.
 ```
 
 **Valid Status Values:**
+
 - `approved` - Accept the member into the church
 - `rejected` - Reject the membership request (removes church_id)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "member approved successfully"
@@ -2633,6 +2929,7 @@ Approve or reject a pending membership request.
 ```
 
 Or for rejection:
+
 ```json
 {
   "message": "member rejected successfully"
@@ -2640,46 +2937,56 @@ Or for rejection:
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Not church owner, user not requesting to join, or invalid status
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Update Church (Owner Only)
+
 Update church information. Only the owner can update.
 
 **Endpoint:** `PUT /api/churches/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Church ID (integer)
 
 **Request Body:** Same format as Create Church
 
 **Success Response (200):**
+
 ```json
 {
   "message": "church updated successfully",
-  "data": { /* updated church */ }
+  "data": {
+    /* updated church */
+  }
 }
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Not church owner, church not found, or name already exists
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Delete Church (Owner Only)
+
 Delete a church. Only the owner can delete.
 
 **Endpoint:** `DELETE /api/churches/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Church ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "church deleted successfully"
@@ -2687,10 +2994,12 @@ Delete a church. Only the owner can delete.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Not church owner or church not found
 - **401 Unauthorized:** User not authenticated
 
 **Notes:**
+
 - Deleting a church removes all member associations
 - Members' `church_id` will be set to NULL
 
@@ -2713,12 +3022,14 @@ Delete a church. Only the owner can delete.
 ### User Church Information
 
 Users have the following church-related fields:
+
 - `birthday`: User's date of birth (optional)
 - `church_id`: ID of church user belongs to (nullable)
 - `church_status`: `pending`, `approved`, or `rejected`
 - `bio`: User biography/description (optional)
 
 **Example User Response:**
+
 ```json
 {
   "id": 10,
@@ -2755,6 +3066,7 @@ completed → refunded (refunded payment)
 
 **Payway by ABA Configuration:**
 Required environment variables:
+
 - `PAYWAY_MERCHANT_ID` - Your Payway merchant ID
 - `PAYWAY_API_KEY` - Your Payway API key
 - `PAYWAY_API_USERNAME` - Your Payway username
@@ -2763,12 +3075,14 @@ Required environment variables:
 - `PAYWAY_CALLBACK_URL` - Backend webhook URL
 
 **QR Code Expiration:**
+
 - QR codes expire after 3 minutes for security
 - Frontend should show countdown timer
 - Users can regenerate expired QR codes
 - Card payments have no expiration
 
 **Supported Currencies:**
+
 - `USD` - US Dollar
 - `KHR` - Cambodian Riel
 
@@ -2779,12 +3093,14 @@ Required environment variables:
 Firebase Cloud Messaging (FCM) integration for real-time push notifications to mobile apps and web browsers.
 
 ### Features
+
 - Push notifications to iOS, Android, and Web platforms
 - Automatic token management and cleanup
 - Background notification delivery
 - Works seamlessly with the notification system
 
 ### Setup Requirements
+
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
 2. Download the service account key (JSON file)
 3. Set environment variable: `FIREBASE_CREDENTIALS_PATH=/path/to/firebase-adminsdk.json`
@@ -2793,12 +3109,14 @@ Firebase Cloud Messaging (FCM) integration for real-time push notifications to m
 ---
 
 ### Register Device Token
+
 Register a device token to receive push notifications.
 
 **Endpoint:** `POST /api/device-tokens/register`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "token": "fcm_device_token_string_here",
@@ -2807,10 +3125,12 @@ Register a device token to receive push notifications.
 ```
 
 **Parameters:**
+
 - `token` (required) - FCM device token from Firebase SDK
 - `platform` (required) - Platform type: `ios`, `android`, or `web`
 
 **Success Response (200):**
+
 ```json
 {
   "message": "Device token registered successfully",
@@ -2819,6 +3139,7 @@ Register a device token to receive push notifications.
 ```
 
 **Notes:**
+
 - Tokens are automatically upserted (updated if they already exist)
 - One user can have multiple device tokens (multiple devices)
 - Inactive tokens are automatically cleaned up when FCM reports them as invalid
@@ -2826,12 +3147,14 @@ Register a device token to receive push notifications.
 ---
 
 ### Unregister Device Token
+
 Remove a device token (e.g., on logout).
 
 **Endpoint:** `POST /api/device-tokens/unregister`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "token": "fcm_device_token_string_here"
@@ -2839,6 +3162,7 @@ Remove a device token (e.g., on logout).
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "Device token unregistered successfully"
@@ -2848,12 +3172,14 @@ Remove a device token (e.g., on logout).
 ---
 
 ### Clear All Device Tokens
+
 Remove all device tokens for the current user.
 
 **Endpoint:** `DELETE /api/device-tokens/clear`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "All device tokens deleted successfully"
@@ -2861,6 +3187,7 @@ Remove all device tokens for the current user.
 ```
 
 **Use Cases:**
+
 - User logs out from all devices
 - Account settings: "Sign out everywhere"
 - Privacy/security feature
@@ -2870,52 +3197,58 @@ Remove all device tokens for the current user.
 ### Mobile Integration Example
 
 #### React Native / Expo
+
 ```javascript
-import messaging from '@react-native-firebase/messaging';
-import axios from 'axios';
+import messaging from "@react-native-firebase/messaging";
+import axios from "axios";
 
 // Request permission and get token
 async function registerForPushNotifications() {
   const authStatus = await messaging().requestPermission();
-  
+
   if (authStatus === messaging.AuthorizationStatus.AUTHORIZED) {
     const token = await messaging().getToken();
-    
+
     // Send token to your API
-    await axios.post('https://your-api.com/api/device-tokens/register', {
-      token: token,
-      platform: Platform.OS === 'ios' ? 'ios' : 'android'
-    }, {
-      headers: { 'Authorization': `Bearer ${yourJWTToken}` }
-    });
+    await axios.post(
+      "https://your-api.com/api/device-tokens/register",
+      {
+        token: token,
+        platform: Platform.OS === "ios" ? "ios" : "android",
+      },
+      {
+        headers: { Authorization: `Bearer ${yourJWTToken}` },
+      }
+    );
   }
 }
 
 // Handle foreground notifications
-messaging().onMessage(async remoteMessage => {
-  console.log('Notification received:', remoteMessage);
+messaging().onMessage(async (remoteMessage) => {
+  console.log("Notification received:", remoteMessage);
   // Show in-app notification
 });
 
 // Handle notification tap
-messaging().onNotificationOpenedApp(remoteMessage => {
+messaging().onNotificationOpenedApp((remoteMessage) => {
   // Navigate to relevant screen
-  if (remoteMessage.data?.related_type === 'event') {
-    navigation.navigate('EventDetail', { 
-      id: remoteMessage.data.related_id 
+  if (remoteMessage.data?.related_type === "event") {
+    navigation.navigate("EventDetail", {
+      id: remoteMessage.data.related_id,
     });
   }
 });
 ```
 
 #### Flutter
+
 ```dart
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 
 Future<void> registerForPushNotifications() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
-  
+
   NotificationSettings settings = await messaging.requestPermission(
     alert: true,
     badge: true,
@@ -2924,7 +3257,7 @@ Future<void> registerForPushNotifications() async {
 
   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
     String? token = await messaging.getToken();
-    
+
     // Send to your API
     await http.post(
       Uri.parse('https://your-api.com/api/device-tokens/register'),
@@ -2952,37 +3285,38 @@ FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
 ```
 
 #### Web (PWA)
+
 ```javascript
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 async function registerForPushNotifications() {
   const messaging = getMessaging();
-  
+
   try {
-    const token = await getToken(messaging, { 
-      vapidKey: 'YOUR_VAPID_KEY' 
+    const token = await getToken(messaging, {
+      vapidKey: "YOUR_VAPID_KEY",
     });
-    
+
     // Send token to your API
-    await fetch('https://your-api.com/api/device-tokens/register', {
-      method: 'POST',
+    await fetch("https://your-api.com/api/device-tokens/register", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${yourJWTToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourJWTToken}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         token: token,
-        platform: 'web'
-      })
+        platform: "web",
+      }),
     });
   } catch (err) {
-    console.error('Error getting FCM token:', err);
+    console.error("Error getting FCM token:", err);
   }
 }
 
 // Handle foreground messages
 onMessage(messaging, (payload) => {
-  console.log('Message received:', payload);
+  console.log("Message received:", payload);
   // Show notification
 });
 ```
@@ -2992,12 +3326,14 @@ onMessage(messaging, (payload) => {
 ## Settings
 
 ### Get User Settings
+
 Retrieve the authenticated user's settings/preferences.
 
 **Endpoint:** `GET /api/settings`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 1,
@@ -3018,12 +3354,14 @@ Retrieve the authenticated user's settings/preferences.
 ---
 
 ### Update Settings
+
 Update the authenticated user's preferences.
 
 **Endpoint:** `PUT /api/settings`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "language": "kh",
@@ -3036,6 +3374,7 @@ Update the authenticated user's preferences.
 ```
 
 **Valid Values:**
+
 - `language`: `en` (English), `kh` (Khmer), `kr` (Korean), `cn` (Chinese)
 - `theme`: `light`, `dark`, `auto`
 - Notification flags: `true` or `false` (boolean)
@@ -3043,18 +3382,21 @@ Update the authenticated user's preferences.
 **Success Response (200):** Returns updated settings object.
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid settings data or theme not in allowed values
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Reset Settings to Defaults
+
 Reset all user settings to their default values.
 
 **Endpoint:** `POST /api/settings/reset`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 1,
@@ -3071,6 +3413,7 @@ Reset all user settings to their default values.
 ```
 
 **Default Values:**
+
 - Language: `en`
 - Theme: `light`
 - Notify on Booking: `true`
@@ -3083,11 +3426,13 @@ Reset all user settings to their default values.
 ## Notifications
 
 **Recipient Types:**
+
 - `user` - Send to a specific user
 - `band` - Send to all members of a band/team
 - `all` - Broadcast to all users in the system
 
 **Features:**
+
 - Users automatically receive notifications sent to them, their band, and all broadcasts
 - Read tracking per notification
 - Automatic filtering based on user's band membership
@@ -3095,12 +3440,14 @@ Reset all user settings to their default values.
 ---
 
 ### Create Notification (To Specific User)
+
 Create a new notification for a specific user.
 
 **Endpoint:** `POST /api/notifications`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "user_id": 10,
@@ -3113,6 +3460,7 @@ Create a new notification for a specific user.
 ```
 
 **Validation Rules:**
+
 - `user_id`: required for user notifications
 - `title`: required, min 1 char, max 255 chars
 - `message`: required, min 1 char
@@ -3121,6 +3469,7 @@ Create a new notification for a specific user.
 - `related_id`: optional, integer (ID of related resource)
 
 **Success Response (201):**
+
 ```json
 {
   "id": 1,
@@ -3139,21 +3488,25 @@ Create a new notification for a specific user.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid input or validation error
 - **401 Unauthorized:** User not authenticated
 
 ---
 
 ### Create Band Notification (To Team)
+
 Create a notification for all members of a band/team.
 
 **Endpoint:** `POST /api/notifications/band/:band_id`  
 **Authentication:** Required (Bearer Token)
 
 **Path Parameters:**
+
 - `band_id` (required) - Band ID (integer)
 
 **Request Body:**
+
 ```json
 {
   "title": "New Song Added",
@@ -3165,6 +3518,7 @@ Create a notification for all members of a band/team.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "id": 2,
@@ -3187,12 +3541,14 @@ Create a notification for all members of a band/team.
 ---
 
 ### Create Broadcast Notification (To All Users)
+
 Create a broadcast notification that all users in the system will receive.
 
 **Endpoint:** `POST /api/notifications/broadcast`  
 **Authentication:** Required (Bearer Token)
 
 **Request Body:**
+
 ```json
 {
   "title": "System Maintenance",
@@ -3202,6 +3558,7 @@ Create a broadcast notification that all users in the system will receive.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "id": 3,
@@ -3221,18 +3578,21 @@ Create a broadcast notification that all users in the system will receive.
 ---
 
 ### Get All Notifications
+
 Retrieve all notifications for the authenticated user with pagination.
 
 **Endpoint:** `GET /api/notifications`  
 **Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
+
 - `page` (optional, default: 1)
 - `page_size` (optional, default: 20, max: 100)
 
 **Example:** `GET /api/notifications?page=1&page_size=20`
 
 **Success Response (200):**
+
 ```json
 {
   "data": [
@@ -3302,12 +3662,14 @@ Retrieve all notifications for the authenticated user with pagination.
 ---
 
 ### Get Unread Notifications
+
 Retrieve all unread notifications for the authenticated user.
 
 **Endpoint:** `GET /api/notifications/unread`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 [
   {
@@ -3328,12 +3690,14 @@ Retrieve all unread notifications for the authenticated user.
 ---
 
 ### Get Unread Count
+
 Get the count of unread notifications for the authenticated user.
 
 **Endpoint:** `GET /api/notifications/unread/count`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "count": 5
@@ -3345,15 +3709,18 @@ Get the count of unread notifications for the authenticated user.
 ---
 
 ### Get Notification by ID
+
 Retrieve a specific notification.
 
 **Endpoint:** `GET /api/notifications/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Notification ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "id": 3,
@@ -3370,6 +3737,7 @@ Retrieve a specific notification.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid ID format
 - **404 Not Found:** Notification not found
 - **401 Unauthorized:** User doesn't own this notification
@@ -3377,15 +3745,18 @@ Retrieve a specific notification.
 ---
 
 ### Mark Notification as Read
+
 Mark a specific notification as read.
 
 **Endpoint:** `PUT /api/notifications/:id/read`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Notification ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "notification marked as read"
@@ -3393,6 +3764,7 @@ Mark a specific notification as read.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid ID or operation failed
 - **401 Unauthorized:** User doesn't own this notification
 - **404 Not Found:** Notification not found
@@ -3400,12 +3772,14 @@ Mark a specific notification as read.
 ---
 
 ### Mark All Notifications as Read
+
 Mark all notifications as read for the authenticated user.
 
 **Endpoint:** `PUT /api/notifications/read-all`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "all notifications marked as read"
@@ -3417,15 +3791,18 @@ Mark all notifications as read for the authenticated user.
 ---
 
 ### Delete Notification
+
 Delete a specific notification.
 
 **Endpoint:** `DELETE /api/notifications/:id`  
 **Authentication:** Required (Bearer Token, must be owner)
 
 **Path Parameters:**
+
 - `id` (required) - Notification ID (integer)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "notification deleted successfully"
@@ -3433,6 +3810,7 @@ Delete a specific notification.
 ```
 
 **Error Responses:**
+
 - **400 Bad Request:** Invalid ID or operation failed
 - **401 Unauthorized:** User doesn't own this notification
 - **404 Not Found:** Notification not found
@@ -3440,12 +3818,14 @@ Delete a specific notification.
 ---
 
 ### Delete All Notifications
+
 Delete all notifications for the authenticated user.
 
 **Endpoint:** `DELETE /api/notifications`  
 **Authentication:** Required (Bearer Token)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "all notifications deleted successfully"
@@ -3459,12 +3839,14 @@ Delete all notifications for the authenticated user.
 ## Health Check
 
 ### Ping
+
 Simple endpoint to check if the API is running and responsive.
 
 **Endpoint:** `GET /ping`  
 **Authentication:** None (Public)
 
 **Success Response (200):**
+
 ```json
 {
   "message": "api work..."
@@ -3478,16 +3860,19 @@ Simple endpoint to check if the API is running and responsive.
 ## Common HTTP Status Codes
 
 ### Success Codes
+
 - **200 OK** - Request succeeded
 - **201 Created** - Resource created successfully
 
 ### Client Error Codes
+
 - **400 Bad Request** - Invalid input, validation error, or business logic error
 - **401 Unauthorized** - Missing or invalid authentication token
 - **403 Forbidden** - User doesn't have permission (e.g., not the owner)
 - **404 Not Found** - Resource not found
 
 ### Server Error Codes
+
 - **500 Internal Server Error** - Unexpected server error
 
 ---
@@ -3515,17 +3900,20 @@ Or with validation errors:
 ## Authentication Flow
 
 ### Standard Flow (Email/Password)
+
 1. **Register** → `POST /register` → Receive JWT token
 2. **Login** → `POST /login` → Receive JWT token
 3. **Use Token** → Include in `Authorization: Bearer <token>` header for all protected routes
 4. **Logout** → `POST /api/logout` → Token invalidated
 
 ### OAuth Flow (Google)
+
 1. **Get Google ID Token** → From Google OAuth flow on client side
 2. **Authenticate** → `POST /auth/google` with ID token → Receive JWT token
 3. **Use Token** → Same as standard flow
 
 ### Token Usage
+
 Include the JWT token in the `Authorization` header for all protected routes:
 
 ```
@@ -3537,6 +3925,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ## Pagination
 
 ### Request
+
 Most list endpoints support pagination via query parameters:
 
 ```
@@ -3547,11 +3936,14 @@ GET /api/musics?page=2&page_size=25
 - `page_size`: Items per page (default: 20, max: 100)
 
 ### Response
+
 Paginated responses include metadata:
 
 ```json
 {
-  "data": [ /* array of items */ ],
+  "data": [
+    /* array of items */
+  ],
   "pagination": {
     "current_page": 2,
     "page_size": 25,
@@ -3568,6 +3960,7 @@ Paginated responses include metadata:
 ## Database Schema Notes
 
 ### Tables
+
 - **roles** - System roles with permissions (JSON)
 - **users** - User accounts with authentication data (includes birthday, church_id, church_status, bio)
 - **churches** - Church profiles with owner management and member approval system
@@ -3588,6 +3981,7 @@ Paginated responses include metadata:
 - **device_tokens** - FCM push notification tokens
 
 ### Automatic Features
+
 - **Timestamps** - All tables have `created_at` and `updated_at` with auto-update triggers
 - **Cascade Deletes** - Deleting a user/music/event automatically deletes related records
 - **Settings Creation** - New users automatically get default settings via trigger
@@ -3602,7 +3996,7 @@ Paginated responses include metadata:
 PORT=8080
 
 # Database
-POSTGRES_URL=postgres://user:password@host:5432/dbname?sslmode=disable
+POSTGRES_URL=postgres://user:password@host:5433/dbname?sslmode=disable
 
 # Security
 SECRET=your_jwt_secret_key_here
