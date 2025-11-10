@@ -1,0 +1,392 @@
+# ===========================================
+# Ezra API - Makefile
+# ===========================================
+# This Makefile provides convenient commands for building, testing,
+# and deploying the Ezra API application. It supports both local
+# development and Docker-based deployment workflows.
+#
+# Quick Start:
+#   make help          - Show all available commands
+#   make deps          - Download Go dependencies
+#   make run           - Run the application locally
+#   make docker-up     - Start all services with Docker Compose
+#
+# ===========================================
+
+# .PHONY declares targets that don't represent actual files
+# This prevents conflicts with files of the same name and improves performance
+.PHONY: help build run test clean docker-build docker-up docker-down migrate-up migrate-down lint format swagger deps
+
+# ===========================================
+# Variables
+# ===========================================
+# These variables are used throughout the Makefile for consistency
+
+# Application name - used for binary and Docker image naming
+APP_NAME=ezra-api
+
+# Version can be overridden: make build VERSION=2.0.0
+VERSION?=1.0.0
+
+# Build timestamp in UTC format (e.g., 2025-11-10_14:30:00)
+BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
+
+# Git commit hash (short form) for tracking deployed versions
+GIT_COMMIT=$(shell git rev-parse --short HEAD)
+
+# Docker image tag combining app name and version
+DOCKER_IMAGE=$(APP_NAME):$(VERSION)
+
+# ===========================================
+# ANSI Color Codes for Terminal Output
+# ===========================================
+# These make the output more readable and visually organized
+RED=\033[0;31m      # For errors and destructive operations
+GREEN=\033[0;32m    # For success messages
+YELLOW=\033[1;33m   # For warnings and neutral operations
+NC=\033[0m          # No Color - resets to default
+
+# ===========================================
+# Default Target
+# ===========================================
+# When you run just 'make' without arguments, it shows the help
+.DEFAULT_GOAL := help
+
+# ===========================================
+# Help & Documentation
+# ===========================================
+
+## help: Show this help message with all available commands
+help:
+	@echo '$(YELLOW)Ezra API - Available Commands:$(NC)'
+	@echo ''
+	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
+	@echo ''
+
+## version: Display version information (version, build time, git commit)
+version:
+	@echo 'Version:    $(VERSION)'
+	@echo 'Build Time: $(BUILD_TIME)'
+	@echo 'Git Commit: $(GIT_COMMIT)'
+
+# ===========================================
+# Dependency Management
+# ===========================================
+
+## deps: Download and verify Go module dependencies
+# This ensures all dependencies in go.mod are downloaded and checksums verified
+deps:
+	@echo '$(GREEN)Downloading dependencies...$(NC)'
+	go mod download
+	go mod verify
+	@echo '$(GREEN)✓ Dependencies downloaded$(NC)'
+
+## install-tools: Install development tools (linter, swagger, air hot-reload, etc.)
+# These tools are used for development but not required for running the app
+install-tools:
+	@echo '$(GREEN)Installing development tools...$(NC)'
+	# golangci-lint: Comprehensive Go linter
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	# swag: Generates Swagger/OpenAPI documentation
+	go install github.com/swaggo/swag/cmd/swag@latest
+	# goimports: Formats imports and code
+	go install golang.org/x/tools/cmd/goimports@latest
+	# air: Live reload for Go apps during development
+	go install github.com/cosmtrek/air@latest
+	@echo '$(GREEN)✓ Tools installed$(NC)'
+
+# ===========================================
+# Building
+# ===========================================
+
+## build: Build the application binary for Linux (for production deployment)
+# Creates a statically-linked binary in bin/ directory
+# CGO_ENABLED=0: Disables C dependencies for static linking
+# -ldflags: Injects version info and strips debug symbols for smaller binary
+#   -w: Omit DWARF symbol table
+#   -s: Omit symbol table and debug info
+build:
+	@echo '$(GREEN)Building $(APP_NAME)...$(NC)'
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+		-ldflags="-w -s \
+		-X 'main.Version=$(VERSION)' \
+		-X 'main.BuildTime=$(BUILD_TIME)' \
+		-X 'main.GitCommit=$(GIT_COMMIT)'" \
+		-o bin/$(APP_NAME) \
+		./cmd/main.go
+	@echo '$(GREEN)✓ Build complete: bin/$(APP_NAME)$(NC)'
+
+## prod-build: Complete production build (clean + deps + test + build)
+# Use this before deploying to ensure everything is fresh and tested
+prod-build: clean deps test build
+	@echo '$(GREEN)✓ Production build complete$(NC)'
+
+# ===========================================
+# Running Locally
+# ===========================================
+
+## run: Run the application locally (without building binary)
+# Uses 'go run' which compiles and runs in one step
+# Useful for quick testing during development
+run:
+	@echo '$(GREEN)Running $(APP_NAME)...$(NC)'
+	go run ./cmd/main.go
+
+## dev: Run the application in development mode with hot reload
+# Requires 'air' tool (install with: make install-tools)
+# Air watches for file changes and automatically rebuilds/restarts the app
+dev:
+	@echo '$(GREEN)Running in development mode...$(NC)'
+	air -c .air.toml
+
+# ===========================================
+# Testing
+# ===========================================
+
+## test: Run all tests with race detection and generate coverage report
+# -v: Verbose output showing each test
+# -race: Enables race condition detection
+# -coverprofile: Generates coverage data file
+test:
+	@echo '$(GREEN)Running tests...$(NC)'
+	go test -v -race -coverprofile=coverage.out ./...
+	@echo '$(GREEN)✓ Tests complete$(NC)'
+
+## test-coverage: Run tests and open HTML coverage report in browser
+# Generates an HTML file showing which lines are covered by tests
+test-coverage: test
+	@echo '$(GREEN)Generating coverage report...$(NC)'
+	go tool cover -html=coverage.out -o coverage.html
+	@echo '$(GREEN)✓ Coverage report: coverage.html$(NC)'
+
+## test-unit: Run only unit tests (faster, excludes integration tests)
+# -short flag tells tests to skip long-running tests
+test-unit:
+	@echo '$(GREEN)Running unit tests...$(NC)'
+	go test -v -short ./...
+
+## test-integration: Run only integration tests (slower, requires services)
+# -run Integration: Only runs tests with "Integration" in the name
+test-integration:
+	@echo '$(GREEN)Running integration tests...$(NC)'
+	go test -v -run Integration ./...
+
+## bench: Run benchmark tests to measure performance
+# -bench=.: Runs all benchmark functions
+# -benchmem: Includes memory allocation statistics
+bench:
+	@echo '$(GREEN)Running benchmarks...$(NC)'
+	go test -bench=. -benchmem ./...
+
+# ===========================================
+# Code Quality
+# ===========================================
+
+## lint: Run golangci-lint to check code quality
+# Checks for bugs, performance issues, style violations, etc.
+# Configuration is in .golangci.yml (if present)
+lint:
+	@echo '$(GREEN)Running linter...$(NC)'
+	golangci-lint run ./...
+	@echo '$(GREEN)✓ Linting complete$(NC)'
+
+## format: Format code using gofmt and goimports
+# gofmt: Standard Go formatter
+# goimports: Organizes imports and formats code
+format:
+	@echo '$(GREEN)Formatting code...$(NC)'
+	go fmt ./...
+	goimports -w .
+	@echo '$(GREEN)✓ Code formatted$(NC)'
+
+## vet: Run go vet to find suspicious code constructs
+# Examines Go source code and reports suspicious constructs
+# Example: unreachable code, incorrect printf arguments, etc.
+vet:
+	@echo '$(GREEN)Running go vet...$(NC)'
+	go vet ./...
+	@echo '$(GREEN)✓ Vet complete$(NC)'
+
+## security-scan: Run gosec security scanner
+# Scans code for common security problems
+# Requires: go install github.com/securego/gosec/v2/cmd/gosec@latest
+security-scan:
+	@echo '$(GREEN)Running security scan...$(NC)'
+	gosec ./...
+	@echo '$(GREEN)✓ Security scan complete$(NC)'
+
+## check: Run all quality checks (format + vet + lint + test)
+# Comprehensive check before committing code
+check: format vet lint test
+	@echo '$(GREEN)✓ All checks passed$(NC)'
+
+# ===========================================
+# Documentation
+# ===========================================
+
+## swagger: Generate Swagger/OpenAPI documentation from code annotations
+# Scans your code for swagger comments and generates docs/swagger.json
+# API docs will be available at http://localhost:8080/swagger/index.html
+swagger:
+	@echo '$(GREEN)Generating Swagger docs...$(NC)'
+	swag init -g cmd/main.go --output docs
+	@echo '$(GREEN)✓ Swagger docs generated$(NC)'
+
+# ===========================================
+# Cleanup
+# ===========================================
+
+## clean: Remove build artifacts and temporary files
+# Cleans: binaries, temp files, coverage reports
+clean:
+	@echo '$(YELLOW)Cleaning build artifacts...$(NC)'
+	rm -rf bin/
+	rm -rf tmp/
+	rm -f coverage.out coverage.html
+	@echo '$(GREEN)✓ Clean complete$(NC)'
+
+# ===========================================
+# Docker Operations
+# ===========================================
+
+## docker-build: Build Docker image with version tags
+# Creates a Docker image using the Dockerfile
+# Tags it with both version number and 'latest'
+# Build args inject version info into the image
+docker-build:
+	@echo '$(GREEN)Building Docker image: $(DOCKER_IMAGE)...$(NC)'
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+		-t $(DOCKER_IMAGE) \
+		-t $(APP_NAME):latest \
+		.
+	@echo '$(GREEN)✓ Docker image built: $(DOCKER_IMAGE)$(NC)'
+
+## docker-up: Start all services with Docker Compose (core services only)
+# Starts: PostgreSQL database and API service
+# -d flag runs in detached mode (background)
+docker-up:
+	@echo '$(GREEN)Starting services...$(NC)'
+	docker-compose up -d
+	@echo '$(GREEN)✓ Services started$(NC)'
+
+## docker-up-full: Start all services including optional ones (Redis, Nginx)
+# Uses profiles to include optional services
+# Starts: PostgreSQL, Redis, API, and Nginx reverse proxy
+docker-up-full:
+	@echo '$(GREEN)Starting all services (including optional)...$(NC)'
+	docker-compose --profile full --profile nginx up -d
+	@echo '$(GREEN)✓ All services started$(NC)'
+
+## docker-down: Stop all running Docker services
+# Stops and removes containers but keeps volumes (data persists)
+docker-down:
+	@echo '$(YELLOW)Stopping services...$(NC)'
+	docker-compose down
+	@echo '$(GREEN)✓ Services stopped$(NC)'
+
+## docker-down-volumes: Stop services AND delete all data volumes
+# WARNING: This deletes your database! Only use for complete reset
+docker-down-volumes:
+	@echo '$(RED)Stopping services and removing volumes...$(NC)'
+	docker-compose down -v
+	@echo '$(GREEN)✓ Services stopped and volumes removed$(NC)'
+
+## docker-logs: Follow logs from all Docker services
+# -f flag follows logs in real-time (like tail -f)
+# Press Ctrl+C to stop following
+docker-logs:
+	docker-compose logs -f
+
+## docker-logs-api: Follow logs from API service only
+# Useful for debugging just the API without database noise
+docker-logs-api:
+	docker-compose logs -f api
+
+## docker-restart: Restart all Docker services (down + up)
+# Quick way to restart everything
+docker-restart: docker-down docker-up
+
+# ===========================================
+# Database Operations
+# ===========================================
+
+## migrate-up: Apply database migrations (create/update tables)
+# Runs the SQL migration file to set up database schema
+# Executes: migrate/000000_postgres.up.sql
+migrate-up:
+	@echo '$(GREEN)Running database migrations...$(NC)'
+	docker exec -i ezra-postgres psql -U postgres -d ezradb < migrate/000000_postgres.up.sql
+	@echo '$(GREEN)✓ Migrations applied$(NC)'
+
+## migrate-down: Rollback database migrations (drop tables)
+# WARNING: This will delete all tables and data!
+# Executes: migrate/000000_postgres.down.sql
+migrate-down:
+	@echo '$(RED)Rolling back database migrations...$(NC)'
+	docker exec -i ezra-postgres psql -U postgres -d ezradb < migrate/000000_postgres.down.sql
+	@echo '$(GREEN)✓ Migrations rolled back$(NC)'
+
+## db-connect: Open an interactive psql session to the database
+# Useful for running manual SQL queries or inspecting data
+# Type '\q' to exit psql
+db-connect:
+	docker exec -it ezra-postgres psql -U postgres -d ezradb
+
+## db-backup: Create a timestamped database backup
+# Saves backup to: backups/backup_YYYYMMDD_HHMMSS.sql
+# Uses pg_dump to create a complete database dump
+db-backup:
+	@echo '$(GREEN)Creating database backup...$(NC)'
+	mkdir -p backups
+	docker exec ezra-postgres pg_dump -U postgres ezradb > backups/backup_$(shell date +%Y%m%d_%H%M%S).sql
+	@echo '$(GREEN)✓ Backup created in backups/$(NC)'
+
+## db-restore: Restore database from a backup file
+# Usage: make db-restore BACKUP_FILE=backups/backup_20251110_143000.sql
+# WARNING: This will overwrite the current database!
+db-restore:
+	@echo '$(YELLOW)Restoring database from $(BACKUP_FILE)...$(NC)'
+	docker exec -i ezra-postgres psql -U postgres -d ezradb < $(BACKUP_FILE)
+	@echo '$(GREEN)✓ Database restored$(NC)'
+
+# ===========================================
+# Health & Monitoring
+# ===========================================
+
+## health-check: Check if all services are healthy and responding
+# Tests both API and database availability
+# Returns error if any service is unhealthy
+health-check:
+	@echo '$(GREEN)Checking service health...$(NC)'
+	@curl -f http://localhost:8080/health || echo '$(RED)API is not healthy$(NC)'
+	@docker exec ezra-postgres pg_isready -U postgres || echo '$(RED)Database is not healthy$(NC)'
+
+# ===========================================
+# CI/CD Pipeline
+# ===========================================
+
+## ci: Run complete CI pipeline locally (deps + quality checks + coverage)
+# Simulates what would run in GitHub Actions or similar CI
+# Use before pushing to ensure your changes pass CI
+ci: deps check test-coverage
+	@echo '$(GREEN)✓ CI pipeline complete$(NC)'
+
+# ===========================================
+# Common Workflows
+# ===========================================
+# These are not in the help menu but are useful command chains
+
+# Development workflow: Start fresh with clean build and hot reload
+.PHONY: dev-setup
+dev-setup: deps install-tools swagger
+	@echo '$(GREEN)✓ Development environment ready$(NC)'
+	@echo '$(YELLOW)Run "make dev" to start with hot reload$(NC)'
+
+# Docker workflow: Complete Docker setup from scratch
+.PHONY: docker-fresh
+docker-fresh: docker-down-volumes docker-build docker-up migrate-up
+	@echo '$(GREEN)✓ Fresh Docker environment ready$(NC)'
+	@echo '$(YELLOW)API available at http://localhost:8080$(NC)'
