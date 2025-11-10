@@ -144,14 +144,14 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '1'
-    #       memory: 512M
-    #     reservations:
-    #       cpus: '0.5'
-    #       memory: 256M
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   # ==========================================
   # Nginx Reverse Proxy (Optional)
