@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
 -- ============================
 CREATE TABLE IF NOT EXISTS churches (
     id SERIAL PRIMARY KEY,
-    fullname VARCHAR(255) NOT NULL UNIQUE,
+    fullname VARCHAR(255) NOT NULL CONSTRAINT uni_churches_fullname UNIQUE,
     address TEXT,
     phone VARCHAR(50),
     email VARCHAR(255),
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS settings (
     enable_push_notifications BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE(user_id),
+    CONSTRAINT uni_settings_user_id UNIQUE(user_id),
     CHECK (theme IN ('light', 'dark', 'auto'))
 );
 
@@ -557,7 +557,7 @@ EXECUTE FUNCTION update_updated_at_column();
 CREATE TABLE IF NOT EXISTS supporters (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,  -- Company/Organization/Church name
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL CONSTRAINT uni_supporters_email UNIQUE,
     phone VARCHAR(50),
     type VARCHAR(50) NOT NULL DEFAULT 'company',  -- 'company', 'organization', or 'church'
     website VARCHAR(255),

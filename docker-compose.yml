@@ -97,8 +97,8 @@ services:
       REDIS_ENABLED: ${REDIS_ENABLED:-false}
       
       # JWT Configuration
-      SECRET_KEY: ${SECRET_KEY:?JWT secret key required}
-      JWT_EXPIRY: ${JWT_EXPIRY:-24h}
+      JWT_SECRET: ${JWT_SECRET:?JWT secret key required}
+      JWT_TOKEN_EXPIRY: ${JWT_TOKEN_EXPIRY:-10}
       JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-168h}
       
       # OAuth Configuration
@@ -109,11 +109,12 @@ services:
       FIREBASE_ENABLED: ${FIREBASE_ENABLED:-false}
       
       # Email Configuration
-      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
-      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-587}
-      EMAIL_SMTP_USERNAME: ${EMAIL_SMTP_USERNAME:-}
-      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
-      EMAIL_FROM: ${EMAIL_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-starttls}
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
       
       # PayWay Configuration
@@ -133,25 +134,25 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8090/ping"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 40s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
 
   # ==========================================
   # Nginx Reverse Proxy (Optional)
