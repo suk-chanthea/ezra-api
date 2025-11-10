@@ -2,8 +2,6 @@ package database
 
 import (
 	"time"
-	"log"
-	"strings"
 
 	"github.com/suk-chanthea/ezra/config"
 	"github.com/suk-chanthea/ezra/infrastructure/persistence"
@@ -43,7 +41,7 @@ func NewPostgresDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 // AutoMigrate runs database schema migrations for all persistence models.
 func AutoMigrate(db *gorm.DB) error {
-	err := db.AutoMigrate(
+	return db.AutoMigrate(
 		&persistence.UserModel{},
 		&persistence.MusicModel{},
 		&persistence.BandModel{},
@@ -60,15 +58,4 @@ func AutoMigrate(db *gorm.DB) error {
 		&persistence.SettingModel{},
 		&persistence.ChurchModel{},
 	)
-
-	// Gracefully ignore missing constraint errors
-	if err != nil {
-		if strings.Contains(err.Error(), `constraint "uni_supporters_email"`) {
-			log.Println("⚠️  Ignoring missing constraint 'uni_supporters_email' on 'supporters' table.")
-			return nil
-		}
-		return err
-	}
-
-	return nil
 }
