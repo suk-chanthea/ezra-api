@@ -35,8 +35,8 @@ backups/*.sql.gz
 Thumbs.db
 
 # Development files (you removed these)
-docker-compose.override.yml
-Dockerfile.dev
+# docker-compose.override.yml
+# Dockerfile.dev
 
 # Go build artifacts
 tmp/
