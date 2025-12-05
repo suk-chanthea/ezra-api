@@ -107,7 +107,7 @@ func Load() (*Config, error) {
 			Port:     getEnv("DB_PORT", "5432"),
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "postgres"),
-			Name:     getEnv("DB_NAME", "ezra"),
+			Name:     getEnv("DB_NAME", "ezradb"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 			Timezone: getEnv("DB_TIMEZONE", "UTC"),
 		},
