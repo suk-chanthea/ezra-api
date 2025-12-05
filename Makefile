@@ -249,34 +249,34 @@ docker-build:
 ## docker-up: Start services
 docker-up:
 	@echo [+] Starting services...
-	docker-compose up -d
+	docker compose up -d
 	@echo [OK] Services started
 
 ## docker-up-full: Start all services including optional ones
 docker-up-full:
 	@echo [+] Starting all services...
-	docker-compose --profile full --profile nginx up -d
+	docker compose --profile full --profile nginx up -d
 	@echo [OK] All services started
 
 ## docker-down: Stop services
 docker-down:
 	@echo [+] Stopping services...
-	docker-compose down
+	docker compose down
 	@echo [OK] Services stopped
 
 ## docker-down-volumes: Stop services and remove volumes
 docker-down-volumes:
 	@echo [WARNING] Stopping services and removing volumes...
-	docker-compose down -v
+	docker compose down -v
 	@echo [OK] Services stopped and volumes removed
 
 ## docker-logs: Follow all service logs
 docker-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 ## docker-logs-api: Follow API logs only
 docker-logs-api:
-	docker-compose logs -f api
+	docker compose logs -f api
 
 ## docker-restart: Restart services
 docker-restart: docker-down docker-up
