@@ -241,8 +241,8 @@ func (uc *bandUseCase) entityToResponse(ctx context.Context, band *entity.Band, 
 		Cover:       band.Cover,
 		IsPublic:    band.IsPublic,
 		UserID:      band.UserID,
-		CreatedAt:   band.CreatedAt,
-		UpdatedAt:   band.UpdatedAt,
+		CreatedAt:   dto.NewLocalTime(band.CreatedAt),
+		UpdatedAt:   dto.NewLocalTime(band.UpdatedAt),
 	}
 	
 	if includeDetails {
@@ -286,8 +286,8 @@ func (uc *bandUseCase) musicsToResponses(musics []*entity.Music) []*dto.MusicRes
 			Lyrics:      music.Lyrics,
 			Description: music.Description,
 			UserID:      music.UserID,
-			CreatedAt:   music.CreatedAt,
-			UpdatedAt:   music.UpdatedAt,
+			CreatedAt:   dto.NewLocalTime(music.CreatedAt),
+			UpdatedAt:   dto.NewLocalTime(music.UpdatedAt),
 		}
 	}
 	return responses
@@ -303,8 +303,8 @@ func (uc *bandUseCase) usersToResponses(users []*entity.User) []*dto.UserRespons
 			Profile:   user.Profile,
 			Email:     user.Email,
 			Role:      user.Role,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
+			CreatedAt: dto.NewLocalTime(user.CreatedAt),
+			UpdatedAt: dto.NewLocalTime(user.UpdatedAt),
 		}
 	}
 	return responses

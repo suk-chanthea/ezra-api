@@ -136,11 +136,11 @@ func (uc *eventUseCase) entityToResponse(event *entity.Event) *dto.EventResponse
 		Content:   event.Content,
 		Cover:     event.Cover,
 		Location:  event.Location,
-		StartTime: event.StartTime,
-		EndTime:   event.EndTime,
+		StartTime: dto.NewLocalTime(event.StartTime),
+		EndTime:   dto.NewLocalTime(event.EndTime),
 		UserID:    event.UserID,
-		CreatedAt: event.CreatedAt,
-		UpdatedAt: event.UpdatedAt,
+		CreatedAt: dto.NewLocalTime(event.CreatedAt),
+		UpdatedAt: dto.NewLocalTime(event.UpdatedAt),
 	}
 	
 	// Convert musics
@@ -160,8 +160,8 @@ func (uc *eventUseCase) entityToResponse(event *entity.Event) *dto.EventResponse
 				Lyrics:      music.Lyrics,
 				Description: music.Description,
 				UserID:      music.UserID,
-				CreatedAt:   music.CreatedAt,
-				UpdatedAt:   music.UpdatedAt,
+				CreatedAt:   dto.NewLocalTime(music.CreatedAt),
+				UpdatedAt:   dto.NewLocalTime(music.UpdatedAt),
 			}
 		}
 	}

@@ -98,7 +98,7 @@ func (uc *otpUseCase) SendOTP(req *dto.SendOTPRequest) (*dto.OTPResponse, error)
 	return &dto.OTPResponse{
 		Message:   "OTP sent successfully to your email",
 		Email:     req.Email,
-		ExpiresAt: otp.ExpiresAt,
+		ExpiresAt: dto.NewLocalTime(otp.ExpiresAt),
 	}, nil
 }
 

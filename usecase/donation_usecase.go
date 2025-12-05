@@ -212,7 +212,7 @@ func (uc *donationUseCase) InitiatePayment(donationID uint) (*dto.InitiatePaymen
 	if donation.Type == entity.DonationTypeDonate {
 		response.PaymentMethod = "qr"
 		response.QRCode = paymentResp.QRCode
-		response.ExpiresAt = donation.QRExpiresAt
+		response.ExpiresAt = dto.NewLocalTimePtr(donation.QRExpiresAt)
 		if donation.QRExpiresAt != nil {
 			response.ExpiresInSeconds = int(donation.GetQRTimeRemaining().Seconds())
 		}
@@ -474,8 +474,8 @@ func (uc *donationUseCase) entityToResponse(donation *entity.Donation) *dto.Dona
 		TransactionID: donation.TransactionID,
 		PaymentMethod: donation.PaymentMethod,
 		EventID:       donation.EventID,
-		CreatedAt:     donation.CreatedAt,
-		UpdatedAt:     donation.UpdatedAt,
+		CreatedAt:     dto.NewLocalTime(donation.CreatedAt),
+		UpdatedAt:     dto.NewLocalTime(donation.UpdatedAt),
 	}
 
 	// Convert user if available
@@ -487,8 +487,8 @@ func (uc *donationUseCase) entityToResponse(donation *entity.Donation) *dto.Dona
 			Profile:   donation.User.Profile,
 			Email:     donation.User.Email,
 			Role:      donation.User.Role,
-			CreatedAt: donation.User.CreatedAt,
-			UpdatedAt: donation.User.UpdatedAt,
+			CreatedAt: dto.NewLocalTime(donation.User.CreatedAt),
+			UpdatedAt: dto.NewLocalTime(donation.User.UpdatedAt),
 		}
 	}
 
@@ -500,11 +500,11 @@ func (uc *donationUseCase) entityToResponse(donation *entity.Donation) *dto.Dona
 			Content:   donation.Event.Content,
 			Cover:     donation.Event.Cover,
 			Location:  donation.Event.Location,
-			StartTime: donation.Event.StartTime,
-			EndTime:   donation.Event.EndTime,
+			StartTime: dto.NewLocalTime(donation.Event.StartTime),
+			EndTime:   dto.NewLocalTime(donation.Event.EndTime),
 			UserID:    donation.Event.UserID,
-			CreatedAt: donation.Event.CreatedAt,
-			UpdatedAt: donation.Event.UpdatedAt,
+			CreatedAt: dto.NewLocalTime(donation.Event.CreatedAt),
+			UpdatedAt: dto.NewLocalTime(donation.Event.UpdatedAt),
 		}
 	}
 

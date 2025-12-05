@@ -206,9 +206,9 @@ func (uc *notificationUseCase) entityToResponse(notification *entity.Notificatio
 		RelatedType:   notification.RelatedType,
 		RelatedID:     notification.RelatedID,
 		IsRead:        notification.IsRead,
-		ReadAt:        notification.ReadAt,
-		CreatedAt:     notification.CreatedAt,
-		UpdatedAt:     notification.UpdatedAt,
+		ReadAt:        dto.NewLocalTimePtr(notification.ReadAt),
+		CreatedAt:     dto.NewLocalTime(notification.CreatedAt),
+		UpdatedAt:     dto.NewLocalTime(notification.UpdatedAt),
 	}
 }
 

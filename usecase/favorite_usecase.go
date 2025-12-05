@@ -109,8 +109,8 @@ func (uc *favoriteUseCase) entityToResponse(music *entity.Music) *dto.MusicRespo
 		Lyrics:      music.Lyrics,
 		Description: music.Description,
 		UserID:      music.UserID,
-		CreatedAt:   music.CreatedAt,
-		UpdatedAt:   music.UpdatedAt,
+		CreatedAt:   dto.NewLocalTime(music.CreatedAt),
+		UpdatedAt:   dto.NewLocalTime(music.UpdatedAt),
 	}
 }
 

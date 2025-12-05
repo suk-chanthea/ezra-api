@@ -1,7 +1,5 @@
 package dto
 
-import "time"
-
 // AuthResponse represents authentication response
 type AuthResponse struct {
 	Message string `json:"message,omitempty"`
@@ -12,7 +10,7 @@ type AuthResponse struct {
 type OTPResponse struct {
 	Message   string    `json:"message"`
 	Email     string    `json:"email"`
-	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	ExpiresAt LocalTime `json:"expires_at,omitempty"`
 }
 
 // MusicResponse represents music output
@@ -29,8 +27,8 @@ type MusicResponse struct {
 	Lyrics      string    `json:"lyrics,omitempty"`
 	Description string    `json:"description,omitempty"`
 	UserID      uint      `json:"user_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt   LocalTime `json:"created_at"`
+	UpdatedAt   LocalTime `json:"updated_at"`
 }
 
 // EventResponse represents event output
@@ -40,12 +38,12 @@ type EventResponse struct {
 	Content   string           `json:"content"`
 	Cover     string           `json:"cover"`
 	Location  string           `json:"location"`
-	StartTime time.Time        `json:"start_time"`
-	EndTime   time.Time        `json:"end_time"`
+	StartTime LocalTime        `json:"start_time"`
+	EndTime   LocalTime        `json:"end_time"`
 	UserID    uint             `json:"user_id"`
 	Musics    []*MusicResponse `json:"musics,omitempty"`  // Add this field
-	CreatedAt time.Time        `json:"created_at"`
-	UpdatedAt time.Time        `json:"updated_at"`
+	CreatedAt LocalTime        `json:"created_at"`
+	UpdatedAt LocalTime        `json:"updated_at"`
 }
 
 // ErrorResponse represents error output
@@ -71,14 +69,14 @@ type UserResponse struct {
 	EmailVerified bool            `json:"email_verified"`
 	Phone         string          `json:"phone,omitempty"`
 	Role          string          `json:"role"`
-	Birthday      *time.Time      `json:"birthday,omitempty"`
+	Birthday      *LocalTime      `json:"birthday,omitempty"`
 	ChurchID      *uint           `json:"church_id,omitempty"`
 	Church        *ChurchResponse `json:"church,omitempty"`
 	ChurchStatus  string          `json:"church_status,omitempty"` // pending, approved, rejected
 	BandID        *uint           `json:"band_id,omitempty"`
 	Bio           string          `json:"bio,omitempty"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	CreatedAt     LocalTime       `json:"created_at"`
+	UpdatedAt     LocalTime       `json:"updated_at"`
 }
 
 // BookingResponse represents booking output
@@ -90,8 +88,8 @@ type BookingResponse struct {
 	Notes     string         `json:"notes,omitempty"`
 	Event     *EventResponse `json:"event,omitempty"`
 	User      *UserResponse  `json:"user,omitempty"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	CreatedAt LocalTime      `json:"created_at"`
+	UpdatedAt LocalTime      `json:"updated_at"`
 }
 
 // PaginationMetadata represents pagination information
@@ -139,8 +137,8 @@ type BandResponse struct {
 	MusicCount   int              `json:"music_count,omitempty"`
 	Musics       []*MusicResponse `json:"musics,omitempty"`
 	Members      []*UserResponse  `json:"members,omitempty"`
-	CreatedAt    time.Time        `json:"created_at"`
-	UpdatedAt    time.Time        `json:"updated_at"`
+	CreatedAt    LocalTime        `json:"created_at"`
+	UpdatedAt    LocalTime        `json:"updated_at"`
 }
 
 // SettingResponse represents user settings output
@@ -153,8 +151,8 @@ type SettingResponse struct {
 	NotifyOnMusic          bool      `json:"notify_on_music"`
 	NotifyOnEvent          bool      `json:"notify_on_event"`
 	EnablePushNotifications bool      `json:"enable_push_notifications"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
+	CreatedAt              LocalTime `json:"created_at"`
+	UpdatedAt              LocalTime `json:"updated_at"`
 }
 
 // NotificationResponse represents notification output
@@ -170,9 +168,9 @@ type NotificationResponse struct {
 	RelatedType   string     `json:"related_type,omitempty"`
 	RelatedID     *uint      `json:"related_id,omitempty"`
 	IsRead        bool       `json:"is_read"`
-	ReadAt        *time.Time `json:"read_at,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ReadAt        *LocalTime `json:"read_at,omitempty"`
+	CreatedAt     LocalTime  `json:"created_at"`
+	UpdatedAt     LocalTime  `json:"updated_at"`
 }
 
 // DonationResponse represents donation output
@@ -195,8 +193,8 @@ type DonationResponse struct {
 	User          *UserResponse  `json:"user,omitempty"`
 	Supporter     *SupporterResponse `json:"supporter,omitempty"`
 	Event         *EventResponse `json:"event,omitempty"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
+	CreatedAt     LocalTime      `json:"created_at"`
+	UpdatedAt     LocalTime      `json:"updated_at"`
 	
 	// Payment info (included if initiate_payment=true)
 	PaymentInfo   *InitiatePaymentResponse `json:"payment_info,omitempty"`
@@ -222,7 +220,7 @@ type InitiatePaymentResponse struct {
 	Amount          string `json:"amount"`
 	Currency        string `json:"currency"`
 	PaymentMethod   string `json:"payment_method"` // "qr" or "card"
-	ExpiresAt       *time.Time `json:"expires_at,omitempty"`   // QR expiration time (3 minutes)
+	ExpiresAt       *LocalTime `json:"expires_at,omitempty"`   // QR expiration time (3 minutes)
 	ExpiresInSeconds int    `json:"expires_in_seconds,omitempty"` // Seconds until expiration
 	Message         string `json:"message"`
 }
@@ -242,8 +240,8 @@ type SupporterResponse struct {
 	User         *UserResponse `json:"user,omitempty"`
 	TotalDonations int         `json:"total_donations,omitempty"` // Count of donations from this supporter
 	TotalAmount    float64     `json:"total_amount,omitempty"`    // Total donation amount
-	CreatedAt    time.Time     `json:"created_at"`
-	UpdatedAt    time.Time     `json:"updated_at"`
+	CreatedAt    LocalTime     `json:"created_at"`
+	UpdatedAt    LocalTime     `json:"updated_at"`
 }
 
 // ChurchResponse represents church output
@@ -257,12 +255,12 @@ type ChurchResponse struct {
 	PastorName      string       `json:"pastor_name,omitempty"`
 	Description     string       `json:"description,omitempty"`
 	Logo            string       `json:"logo,omitempty"`
-	EstablishedDate *time.Time   `json:"established_date,omitempty"`
+	EstablishedDate *LocalTime   `json:"established_date,omitempty"`
 	Denomination    string       `json:"denomination,omitempty"`
 	OwnerID         *uint        `json:"owner_id,omitempty"`
 	Owner           *UserResponse `json:"owner,omitempty"`
 	MemberCount     int          `json:"member_count,omitempty"` // Computed: count of approved members
 	PendingCount    int          `json:"pending_count,omitempty"` // Computed: count of pending requests
-	CreatedAt       time.Time    `json:"created_at"`
-	UpdatedAt       time.Time    `json:"updated_at"`
+	CreatedAt       LocalTime    `json:"created_at"`
+	UpdatedAt       LocalTime    `json:"updated_at"`
 }

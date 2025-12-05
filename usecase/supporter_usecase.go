@@ -288,8 +288,8 @@ func (uc *supporterUseCase) entityToResponse(supporter *entity.Supporter) *dto.S
 		Logo:        supporter.Logo,
 		Description: supporter.Description,
 		UserID:      supporter.UserID,
-		CreatedAt:   supporter.CreatedAt,
-		UpdatedAt:   supporter.UpdatedAt,
+		CreatedAt:   dto.NewLocalTime(supporter.CreatedAt),
+		UpdatedAt:   dto.NewLocalTime(supporter.UpdatedAt),
 	}
 
 	// Convert user if present

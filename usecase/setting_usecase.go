@@ -36,8 +36,8 @@ func (uc *settingUseCase) GetUserSettings(userID uint) (*dto.SettingResponse, er
 		NotifyOnMusic:          setting.NotifyOnMusic,
 		NotifyOnEvent:          setting.NotifyOnEvent,
 		EnablePushNotifications: setting.EnablePushNotifications,
-		CreatedAt:              setting.CreatedAt,
-		UpdatedAt:              setting.UpdatedAt,
+		CreatedAt:              dto.NewLocalTime(setting.CreatedAt),
+		UpdatedAt:              dto.NewLocalTime(setting.UpdatedAt),
 	}, nil
 }
 

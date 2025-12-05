@@ -424,11 +424,11 @@ func (uc *churchUseCase) entityToResponse(church *entity.Church) *dto.ChurchResp
 		PastorName:      church.PastorName,
 		Description:     church.Description,
 		Logo:            church.Logo,
-		EstablishedDate: church.EstablishedDate,
+		EstablishedDate: dto.NewLocalTimePtr(church.EstablishedDate),
 		Denomination:    church.Denomination,
 		OwnerID:         church.OwnerID,
-		CreatedAt:       church.CreatedAt,
-		UpdatedAt:       church.UpdatedAt,
+		CreatedAt:       dto.NewLocalTime(church.CreatedAt),
+		UpdatedAt:       dto.NewLocalTime(church.UpdatedAt),
 	}
 
 	// Get member counts
@@ -462,10 +462,10 @@ func (uc *churchUseCase) userToResponse(user *entity.User) *dto.UserResponse {
 		Profile:      user.Profile,
 		ChurchID:     user.ChurchID,
 		ChurchStatus: string(user.ChurchStatus),
-		Birthday:     user.Birthday,
+		Birthday:     dto.NewLocalTimePtr(user.Birthday),
 		Bio:          user.Bio,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
+		CreatedAt:    dto.NewLocalTime(user.CreatedAt),
+		UpdatedAt:    dto.NewLocalTime(user.UpdatedAt),
 	}
 }
 

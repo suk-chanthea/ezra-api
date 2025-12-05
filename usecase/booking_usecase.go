@@ -153,8 +153,8 @@ func (uc *bookingUseCase) entityToResponse(booking *entity.Booking) *dto.Booking
 		UserID:    booking.UserID,
 		Status:    string(booking.Status),
 		Notes:     booking.Notes,
-		CreatedAt: booking.CreatedAt,
-		UpdatedAt: booking.UpdatedAt,
+		CreatedAt: dto.NewLocalTime(booking.CreatedAt),
+		UpdatedAt: dto.NewLocalTime(booking.UpdatedAt),
 	}
 
 	// Convert event if available
@@ -165,11 +165,11 @@ func (uc *bookingUseCase) entityToResponse(booking *entity.Booking) *dto.Booking
 			Content:   booking.Event.Content,
 			Cover:     booking.Event.Cover,
 			Location:  booking.Event.Location,
-			StartTime: booking.Event.StartTime,
-			EndTime:   booking.Event.EndTime,
+			StartTime: dto.NewLocalTime(booking.Event.StartTime),
+			EndTime:   dto.NewLocalTime(booking.Event.EndTime),
 			UserID:    booking.Event.UserID,
-			CreatedAt: booking.Event.CreatedAt,
-			UpdatedAt: booking.Event.UpdatedAt,
+			CreatedAt: dto.NewLocalTime(booking.Event.CreatedAt),
+			UpdatedAt: dto.NewLocalTime(booking.Event.UpdatedAt),
 		}
 
 		// Convert musics if available
@@ -189,8 +189,8 @@ func (uc *bookingUseCase) entityToResponse(booking *entity.Booking) *dto.Booking
 				Lyrics:      music.Lyrics,
 				Description: music.Description,
 				UserID:      music.UserID,
-				CreatedAt:   music.CreatedAt,
-				UpdatedAt:   music.UpdatedAt,
+				CreatedAt:   dto.NewLocalTime(music.CreatedAt),
+				UpdatedAt:   dto.NewLocalTime(music.UpdatedAt),
 			}
 		}
 	}
@@ -205,8 +205,8 @@ func (uc *bookingUseCase) entityToResponse(booking *entity.Booking) *dto.Booking
 			Profile:   booking.User.Profile,
 			Email:     booking.User.Email,
 			Role:      booking.User.Role,
-			CreatedAt: booking.User.CreatedAt,
-			UpdatedAt: booking.User.UpdatedAt,
+			CreatedAt: dto.NewLocalTime(booking.User.CreatedAt),
+			UpdatedAt: dto.NewLocalTime(booking.User.UpdatedAt),
 		}
 	}
 
