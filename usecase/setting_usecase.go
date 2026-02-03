@@ -28,16 +28,16 @@ func (uc *settingUseCase) GetUserSettings(userID uint) (*dto.SettingResponse, er
 	}
 
 	return &dto.SettingResponse{
-		ID:                     setting.ID,
-		UserID:                 setting.UserID,
-		Language:               setting.Language,
-		Theme:                  setting.Theme,
-		NotifyOnBooking:        setting.NotifyOnBooking,
-		NotifyOnMusic:          setting.NotifyOnMusic,
-		NotifyOnEvent:          setting.NotifyOnEvent,
+		ID:                      setting.ID,
+		UserID:                  setting.UserID,
+		Language:                setting.Language,
+		Theme:                   setting.Theme,
+		NotifyOnBooking:         setting.NotifyOnBooking,
+		NotifyOnMusic:           setting.NotifyOnMusic,
+		NotifyOnEvent:           setting.NotifyOnEvent,
 		EnablePushNotifications: setting.EnablePushNotifications,
-		CreatedAt:              dto.NewLocalTime(setting.CreatedAt),
-		UpdatedAt:              dto.NewLocalTime(setting.UpdatedAt),
+		CreatedAt:               dto.NewLocalTime(setting.CreatedAt),
+		UpdatedAt:               dto.NewLocalTime(setting.UpdatedAt),
 	}, nil
 }
 
@@ -67,16 +67,16 @@ func (uc *settingUseCase) UpdateSettings(userID uint, req *dto.UpdateSettingRequ
 	}
 
 	return &dto.SettingResponse{
-		ID:                     existing.ID,
-		UserID:                 existing.UserID,
-		Language:               existing.Language,
-		Theme:                  existing.Theme,
-		NotifyOnBooking:        existing.NotifyOnBooking,
-		NotifyOnMusic:          existing.NotifyOnMusic,
-		NotifyOnEvent:          existing.NotifyOnEvent,
+		ID:                      existing.ID,
+		UserID:                  existing.UserID,
+		Language:                existing.Language,
+		Theme:                   existing.Theme,
+		NotifyOnBooking:         existing.NotifyOnBooking,
+		NotifyOnMusic:           existing.NotifyOnMusic,
+		NotifyOnEvent:           existing.NotifyOnEvent,
 		EnablePushNotifications: existing.EnablePushNotifications,
-		CreatedAt:              existing.CreatedAt,
-		UpdatedAt:              existing.UpdatedAt,
+		CreatedAt:               dto.NewLocalTime(existing.CreatedAt),
+		UpdatedAt:               dto.NewLocalTime(existing.UpdatedAt),
 	}, nil
 }
 
@@ -101,16 +101,15 @@ func (uc *settingUseCase) ResetToDefaults(userID uint) (*dto.SettingResponse, er
 	}
 
 	return &dto.SettingResponse{
-		ID:                     existing.ID,
-		UserID:                 existing.UserID,
-		Language:               existing.Language,
-		Theme:                  existing.Theme,
-		NotifyOnBooking:        existing.NotifyOnBooking,
-		NotifyOnMusic:          existing.NotifyOnMusic,
-		NotifyOnEvent:          existing.NotifyOnEvent,
+		ID:                      existing.ID,
+		UserID:                  existing.UserID,
+		Language:                existing.Language,
+		Theme:                   existing.Theme,
+		NotifyOnBooking:         existing.NotifyOnBooking,
+		NotifyOnMusic:           existing.NotifyOnMusic,
+		NotifyOnEvent:           existing.NotifyOnEvent,
 		EnablePushNotifications: existing.EnablePushNotifications,
-		CreatedAt:              existing.CreatedAt,
-		UpdatedAt:              existing.UpdatedAt,
+		CreatedAt:               dto.NewLocalTime(existing.CreatedAt),
+		UpdatedAt:               dto.NewLocalTime(existing.UpdatedAt),
 	}, nil
 }
-
