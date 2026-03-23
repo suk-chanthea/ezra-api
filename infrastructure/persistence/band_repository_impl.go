@@ -100,6 +100,23 @@ func (r *bandRepositoryImpl) FindByUserID(ctx context.Context, userID uint) ([]*
 	return r.modelsToEntities(models), nil
 }
 
+func (r *bandRepositoryImpl) FindByUserIDPaginated(ctx context.Context, userID uint, offset, limit int) ([]*entity.Band, int64, error) {
+	var models []BandModel
+	var total int64
+	
+	// Get total count for this user
+	if err := r.db.WithContext(ctx).Model(&BandModel{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	// Get paginated results
+	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Offset(offset).Limit(limit).Find(&models).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return r.modelsToEntities(models), total, nil
+}
+
 func (r *bandRepositoryImpl) FindPublicBands(ctx context.Context) ([]*entity.Band, error) {
 	var models []BandModel
 	if err := r.db.WithContext(ctx).Where("is_public = ?", true).Find(&models).Error; err != nil {

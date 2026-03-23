@@ -43,6 +43,16 @@ type ResetPasswordRequest struct {
 	OTPCode     string `json:"otp_code" binding:"required,min=6,max=6"` // Must provide OTP for verification
 }
 
+// UpdateProfileRequest represents user profile update input
+type UpdateProfileRequest struct {
+	Username string `json:"username" binding:"required,min=3,max=100"`
+	Fullname string `json:"fullname" binding:"required,min=1,max=100"`
+	Profile  string `json:"profile"`
+	Phone    string `json:"phone" binding:"omitempty,max=50"`
+	Birthday string `json:"birthday"` // Format: YYYY-MM-DD
+	Bio      string `json:"bio"`
+}
+
 // CreateEventRequest represents event creation input
 type CreateEventRequest struct {
 	Title     string    `json:"title" binding:"required,min=1,max=200"`

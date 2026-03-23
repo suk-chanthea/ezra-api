@@ -14,6 +14,7 @@ type BandRepository interface {
 	FindAllPaginated(ctx context.Context, offset, limit int) ([]*entity.Band, int64, error)
 	FindByID(ctx context.Context, id uint) (*entity.Band, error)
 	FindByUserID(ctx context.Context, userID uint) ([]*entity.Band, error)
+	FindByUserIDPaginated(ctx context.Context, userID uint, offset, limit int) ([]*entity.Band, int64, error)
 	FindPublicBands(ctx context.Context) ([]*entity.Band, error)
 	FindPublicBandsPaginated(ctx context.Context, offset, limit int) ([]*entity.Band, int64, error)
 	Update(ctx context.Context, band *entity.Band) error

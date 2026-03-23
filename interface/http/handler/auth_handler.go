@@ -183,3 +183,60 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+func (h *AuthHandler) GetMe(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	user, err := h.authUseCase.GetMe(userID.(uint))
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *AuthHandler) UpdateMe(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			var message string
+			switch e.Tag() {
+			case "required":
+				message = e.Field() + " is required"
+			case "min":
+				message = e.Field() + " is too short"
+			case "max":
+				message = e.Field() + " is too long"
+			default:
+				message = "invalid " + e.Field()
+			}
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Errors: message})
+			return
+		}
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid input"})
+		return
+	}
+
+	user, err := h.authUseCase.UpdateMe(userID.(uint), &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse{
+		Message: "profile updated successfully",
+		Data:    user,
+	})
+}

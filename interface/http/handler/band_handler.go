@@ -90,7 +90,7 @@ func (h *BandHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, band)
 }
 
-// GetByUser gets bands created by the authenticated user
+// GetByUser gets bands created by the authenticated user with optional pagination
 func (h *BandHandler) GetByUser(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -98,6 +98,28 @@ func (h *BandHandler) GetByUser(c *gin.Context) {
 		return
 	}
 
+	// Parse pagination parameters
+	var pagination dto.PaginationRequest
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid pagination parameters"})
+		return
+	}
+
+	// If pagination parameters are provided, use paginated query
+	if pagination.Page > 0 || pagination.PageSize > 0 {
+		bands, meta, err := h.bandUseCase.GetBandsByUserIDPaginated(c.Request.Context(), userID.(uint), pagination.GetPage(), pagination.GetPageSize())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, dto.PaginatedResponse{
+			Data:       bands,
+			Pagination: meta,
+		})
+		return
+	}
+
+	// Otherwise, return all results
 	bands, err := h.bandUseCase.GetBandsByUserID(c.Request.Context(), userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})

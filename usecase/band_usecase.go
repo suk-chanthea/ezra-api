@@ -15,6 +15,7 @@ type BandUseCase interface {
 	GetAllBandsPaginated(ctx context.Context, page, pageSize int) ([]*dto.BandResponse, *dto.PaginationMetadata, error)
 	GetBandByID(ctx context.Context, id uint) (*dto.BandResponse, error)
 	GetBandsByUserID(ctx context.Context, userID uint) ([]*dto.BandResponse, error)
+	GetBandsByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) ([]*dto.BandResponse, *dto.PaginationMetadata, error)
 	GetPublicBands(ctx context.Context) ([]*dto.BandResponse, error)
 	GetPublicBandsPaginated(ctx context.Context, page, pageSize int) ([]*dto.BandResponse, *dto.PaginationMetadata, error)
 	UpdateBand(ctx context.Context, id uint, req *dto.UpdateBandRequest, userID uint) error
@@ -88,6 +89,17 @@ func (uc *bandUseCase) GetBandsByUserID(ctx context.Context, userID uint) ([]*dt
 	}
 	
 	return uc.entitiesToResponses(ctx, bands), nil
+}
+
+func (uc *bandUseCase) GetBandsByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) ([]*dto.BandResponse, *dto.PaginationMetadata, error) {
+	offset := (page - 1) * pageSize
+	bands, total, err := uc.bandRepo.FindByUserIDPaginated(ctx, userID, offset, pageSize)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	pagination := dto.NewPaginationMetadata(page, pageSize, total)
+	return uc.entitiesToResponses(ctx, bands), pagination, nil
 }
 
 func (uc *bandUseCase) GetPublicBands(ctx context.Context) ([]*dto.BandResponse, error) {

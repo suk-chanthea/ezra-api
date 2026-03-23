@@ -112,6 +112,8 @@ func (r *Router) Setup() *gin.Engine {
 	api.Use(middleware.JWTMiddleware(r.authUseCase))
 	{
 		// User/Auth routes
+		api.GET("/me", r.authHandler.GetMe)
+		api.PUT("/me", r.authHandler.UpdateMe)
 		api.POST("/logout", r.authHandler.Logout)
 		api.DELETE("/user", r.authHandler.DeleteUser)
 

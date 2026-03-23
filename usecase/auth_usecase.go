@@ -19,6 +19,8 @@ type AuthUseCase interface {
 	DeleteUser(userID uint) error
 	GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error)
 	ResetPassword(req *dto.ResetPasswordRequest) (*dto.SuccessResponse, error)
+	GetMe(userID uint) (*dto.UserResponse, error)
+	UpdateMe(userID uint, req *dto.UpdateProfileRequest) (*dto.UserResponse, error)
 	ValidateToken(token string) (*jwt.Token, error)
 	VerifyTokenInDatabase(userID uint, token string) error
 }
@@ -270,6 +272,89 @@ func (uc *authUseCase) ResetPassword(req *dto.ResetPasswordRequest) (*dto.Succes
 	}, nil
 }
 
+func (uc *authUseCase) GetMe(userID uint) (*dto.UserResponse, error) {
+	user, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	return &dto.UserResponse{
+		ID:            user.ID,
+		Username:      user.Username,
+		Fullname:      user.Fullname,
+		Profile:       user.Profile,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
+		Phone:         user.Phone,
+		Role:          user.Role,
+		Birthday:      convertTimePtr(user.Birthday),
+		ChurchID:      user.ChurchID,
+		ChurchStatus:  string(user.ChurchStatus),
+		BandID:        user.BandID,
+		Bio:           user.Bio,
+		CreatedAt:     dto.NewLocalTime(user.CreatedAt),
+		UpdatedAt:     dto.NewLocalTime(user.UpdatedAt),
+	}, nil
+}
+
+func (uc *authUseCase) UpdateMe(userID uint, req *dto.UpdateProfileRequest) (*dto.UserResponse, error) {
+	user, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	// Check if username is being changed and if it's already taken
+	if req.Username != user.Username {
+		existingUser, _ := uc.userRepo.FindByUsername(req.Username)
+		if existingUser != nil && existingUser.ID != userID {
+			return nil, errors.New("username already taken")
+		}
+	}
+
+	// Update user fields
+	user.Username = req.Username
+	user.Fullname = req.Fullname
+	user.Profile = req.Profile
+	user.Phone = req.Phone
+	user.Bio = req.Bio
+
+	// Parse and update birthday if provided
+	if req.Birthday != "" {
+		birthday, err := time.Parse("2006-01-02", req.Birthday)
+		if err != nil {
+			return nil, errors.New("invalid birthday format, use YYYY-MM-DD")
+		}
+		user.Birthday = &birthday
+	} else {
+		user.Birthday = nil
+	}
+
+	user.UpdatedAt = time.Now()
+
+	// Save to database
+	if err := uc.userRepo.Update(user); err != nil {
+		return nil, errors.New("failed to update profile")
+	}
+
+	return &dto.UserResponse{
+		ID:            user.ID,
+		Username:      user.Username,
+		Fullname:      user.Fullname,
+		Profile:       user.Profile,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
+		Phone:         user.Phone,
+		Role:          user.Role,
+		Birthday:      convertTimePtr(user.Birthday),
+		ChurchID:      user.ChurchID,
+		ChurchStatus:  string(user.ChurchStatus),
+		BandID:        user.BandID,
+		Bio:           user.Bio,
+		CreatedAt:     dto.NewLocalTime(user.CreatedAt),
+		UpdatedAt:     dto.NewLocalTime(user.UpdatedAt),
+	}, nil
+}
+
 func (uc *authUseCase) ValidateToken(tokenStr string) (*jwt.Token, error) {
 	return jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		return uc.secretKey, nil
@@ -305,4 +390,12 @@ func (uc *authUseCase) generateToken(user *entity.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(uc.secretKey)
+}
+
+func convertTimePtr(t *time.Time) *dto.LocalTime {
+	if t == nil {
+		return nil
+	}
+	localTime := dto.NewLocalTime(*t)
+	return &localTime
 }
