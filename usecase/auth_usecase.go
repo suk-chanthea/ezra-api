@@ -43,19 +43,19 @@ func NewAuthUseCase(repo repository.UserRepository, otpRepo repository.OTPReposi
 
 func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, error) {
 	// Verify OTP first (email_verification purpose)
-	otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(req.Email, req.OTPCode, entity.OTPPurpose("email_verification"))
-	if err != nil {
-		return nil, errors.New("invalid OTP code")
-	}
+	// otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(req.Email, req.OTPCode, entity.OTPPurpose("email_verification"))
+	// if err != nil {
+	// 	return nil, errors.New("invalid OTP code")
+	// }
 
-	// Check if OTP is verified and not expired
-	if !otp.Verified {
-		return nil, errors.New("OTP not verified. Please verify OTP first via /otp/verify")
-	}
+	// // Check if OTP is verified and not expired
+	// if !otp.Verified {
+	// 	return nil, errors.New("OTP not verified. Please verify OTP first via /otp/verify")
+	// }
 
-	if otp.IsExpired() {
-		return nil, errors.New("OTP has expired. Please request a new one")
-	}
+	// if otp.IsExpired() {
+	// 	return nil, errors.New("OTP has expired. Please request a new one")
+	// }
 
 	// Check if user already exists
 	existing, _ := uc.userRepo.FindByUsername(req.Username)
@@ -118,24 +118,24 @@ func (uc *authUseCase) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	}
 
 	// Optional 2FA: If OTP code is provided, verify it
-	if req.OTPCode != "" {
-		otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(user.Email, req.OTPCode, entity.OTPPurpose("login"))
-		if err != nil {
-			return nil, errors.New("invalid 2FA OTP code")
-		}
+	// if req.OTPCode != "" {
+	// 	otp, err := uc.otpRepo.FindByEmailCodeAndPurpose(user.Email, req.OTPCode, entity.OTPPurpose("login"))
+	// 	if err != nil {
+	// 		return nil, errors.New("invalid 2FA OTP code")
+	// 	}
 
-		// Check if OTP is verified and not expired
-		if !otp.Verified {
-			return nil, errors.New("OTP not verified. Please verify OTP first via /otp/verify")
-		}
+	// 	// Check if OTP is verified and not expired
+	// 	if !otp.Verified {
+	// 		return nil, errors.New("OTP not verified. Please verify OTP first via /otp/verify")
+	// 	}
 
-		if otp.IsExpired() {
-			return nil, errors.New("OTP has expired. Please request a new one")
-		}
+	// 	if otp.IsExpired() {
+	// 		return nil, errors.New("OTP has expired. Please request a new one")
+	// 	}
 
-		// Delete the used OTP (only for this purpose)
-		go uc.otpRepo.DeleteByEmailAndPurpose(user.Email, entity.OTPPurpose("login"))
-	}
+	// 	// Delete the used OTP (only for this purpose)
+	// 	go uc.otpRepo.DeleteByEmailAndPurpose(user.Email, entity.OTPPurpose("login"))
+	// }
 
 	// Generate JWT
 	token, err := uc.generateToken(user)
