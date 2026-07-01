@@ -11,11 +11,20 @@ type RegisterRequest struct {
 	// OTPCode  string `json:"otp_code" binding:"required,min=6,max=6"` // Must verify email via OTP before registration
 }
 
-// LoginRequest represents login input
+// LoginRequest represents login input (provide username or email, not both)
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
+	Username string `json:"username"`
+	Email    string `json:"email" binding:"omitempty,email"`
 	Password string `json:"password" binding:"required"`
 	// OTPCode  string `json:"otp_code,omitempty" binding:"omitempty,min=6,max=6"` // Optional 2FA OTP code
+}
+
+// Identifier returns the username or email used for login.
+func (r *LoginRequest) Identifier() string {
+	if r.Username != "" {
+		return r.Username
+	}
+	return r.Email
 }
 
 // GoogleLoginRequest represents Google OAuth login input

@@ -57,7 +57,26 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			var message string
+			switch e.Tag() {
+			case "required":
+				message = e.Field() + " is required"
+			case "email":
+				message = "email must be a valid email"
+			default:
+				message = "invalid request"
+			}
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: message})
+			return
+		}
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid request"})
+		return
+	}
+
+	if req.Identifier() == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "username or email is required"})
 		return
 	}
 

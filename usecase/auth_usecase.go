@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/suk-chanthea/ezra/domain/dto"
@@ -106,10 +107,14 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 }
 
 func (uc *authUseCase) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
-	// Find user
-	user, err := uc.userRepo.FindByUsername(req.Username)
+	identifier := strings.TrimSpace(req.Identifier())
+	if identifier == "" {
+		return nil, errors.New("username or email is required")
+	}
+
+	user, err := uc.findUserByUsernameOrEmail(identifier)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return nil, errors.New("invalid credentials")
 	}
 
 	// Verify password
@@ -378,6 +383,20 @@ func (uc *authUseCase) VerifyTokenInDatabase(userID uint, token string) error {
 	}
 
 	return nil
+}
+
+func (uc *authUseCase) findUserByUsernameOrEmail(identifier string) (*entity.User, error) {
+	if strings.Contains(identifier, "@") {
+		if user, err := uc.userRepo.FindByEmail(identifier); err == nil {
+			return user, nil
+		}
+	}
+
+	if user, err := uc.userRepo.FindByUsername(identifier); err == nil {
+		return user, nil
+	}
+
+	return uc.userRepo.FindByEmail(identifier)
 }
 
 func (uc *authUseCase) generateToken(user *entity.User) (string, error) {
