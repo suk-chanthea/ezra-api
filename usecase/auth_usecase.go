@@ -59,14 +59,24 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 	// }
 
 	// Check if user already exists
-	existing, _ := uc.userRepo.FindByUsername(req.Username)
-	if existing != nil {
-		return nil, errors.New("username already exists")
-	}
+	// existing, _ := uc.userRepo.FindByUsername(req.Username)
+	// if existing != nil {
+	// 	return nil, errors.New("username already exists")
+	// }
 
 	existing, _ = uc.userRepo.FindByEmail(req.Email)
 	if existing != nil {
 		return nil, errors.New("email already exists")
+	}
+
+	// Auto-generate a unique username
+	username := generateUsername(req.Email)
+	for {
+		u, _ := uc.userRepo.FindByUsername(username)
+		if u == nil {
+			break
+		}
+		username = generateUsername(req.Email)
 	}
 
 	// Hash password
@@ -76,7 +86,19 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 	}
 
 	// Create entity
-	user := entity.NewUser(req.Username, req.Fullname, req.Email, string(hash))
+	user := entity.NewUser(username, req.Name, req.Email, string(hash))
+
+	// add profile, phone, birthday, bio to user
+	user.Profile = req.Profile
+	user.Phone = req.Phone
+	user.Bio = req.Bio
+	if req.Birthday != "" {
+		birthday, err := time.Parse("2006-01-02", req.Birthday)
+		if err != nil {
+			return nil, errors.New("invalid birthday format, use YYYY-MM-DD")
+		}
+		user.Birthday = &birthday
+	}
 	
 	// Mark email as verified since OTP was verified
 	user.EmailVerified = true

@@ -5,9 +5,13 @@ import "time"
 // RegisterRequest represents registration input
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=100"`
-	Fullname string `json:"fullname" binding:"required,min=1,max=100"`
+	Name string `json:"name" binding:"required,min=1,max=100"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+	Profile  string `json:"profile"`
+	Phone    string `json:"phone" binding:"omitempty,max=15"`
+	Birthday string `json:"birthday"` // Format: YYYY-MM-DD
+	Bio      string `json:"bio"`
 	// OTPCode  string `json:"otp_code" binding:"required,min=6,max=6"` // Must verify email via OTP before registration
 }
 
