@@ -4,7 +4,6 @@ import "time"
 
 // RegisterRequest represents registration input
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=100"`
 	Name string `json:"name" binding:"required,min=1,max=100"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`

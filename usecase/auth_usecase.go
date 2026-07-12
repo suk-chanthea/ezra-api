@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -64,7 +65,7 @@ func (uc *authUseCase) Register(req *dto.RegisterRequest) (*dto.AuthResponse, er
 	// 	return nil, errors.New("username already exists")
 	// }
 
-	existing, _ = uc.userRepo.FindByEmail(req.Email)
+	existing, _ := uc.userRepo.FindByEmail(req.Email)
 	if existing != nil {
 		return nil, errors.New("email already exists")
 	}
@@ -439,4 +440,9 @@ func convertTimePtr(t *time.Time) *dto.LocalTime {
 	}
 	localTime := dto.NewLocalTime(*t)
 	return &localTime
+}
+func generateUsername(email string) string {
+	base := strings.ToLower(strings.Split(email, "@")[0])
+	base = strings.ReplaceAll(base, ".", "")
+	return fmt.Sprintf("%s%d", base, time.Now().UnixNano()%100000)
 }
