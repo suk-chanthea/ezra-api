@@ -12,7 +12,7 @@ import (
 type UserModel struct {
 	ID            uint       `gorm:"primaryKey;autoIncrement"`
 	Username      string     `gorm:"size:100;not null"`
-	Fullname      string     `gorm:"size:100;not null"`
+	Name      string     `gorm:"size:100;not null"`
 	Profile       string     `gorm:"size:255"`
 	Email         string     `gorm:"size:100;unique;not null"`
 	EmailVerified bool       `gorm:"default:false"`
@@ -106,7 +106,7 @@ func (r *userRepositoryImpl) entityToModel(user *entity.User) *UserModel {
 	return &UserModel{
 		ID:            user.ID,
 		Username:      user.Username,
-		Fullname:      user.Fullname,
+		Name:      user.Name,
 		Profile:       user.Profile,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
@@ -130,7 +130,7 @@ func (r *userRepositoryImpl) modelToEntity(model *UserModel) *entity.User {
 	user := &entity.User{
 		ID:            model.ID,
 		Username:      model.Username,
-		Fullname:      model.Fullname,
+		Name:      model.Name,
 		Profile:       model.Profile,
 		Email:         model.Email,
 		EmailVerified: model.EmailVerified,

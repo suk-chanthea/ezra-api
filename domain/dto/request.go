@@ -58,7 +58,7 @@ type ResetPasswordRequest struct {
 // UpdateProfileRequest represents user profile update input
 type UpdateProfileRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=100"`
-	Fullname string `json:"fullname" binding:"required,min=1,max=100"`
+	Name string `json:"name" binding:"required,min=1,max=100"`
 	Profile  string `json:"profile"`
 	Phone    string `json:"phone" binding:"omitempty,max=50"`
 	Birthday string `json:"birthday"` // Format: YYYY-MM-DD
@@ -239,7 +239,7 @@ type UpdateSupporterRequest struct {
 
 // CreateChurchRequest represents church creation input
 type CreateChurchRequest struct {
-	Fullname        string `json:"fullname" binding:"required,min=1,max=255"`
+	Name        string `json:"name" binding:"required,min=1,max=255"`
 	Address         string `json:"address"`
 	Phone           string `json:"phone" binding:"omitempty,max=50"`
 	Email           string `json:"email" binding:"omitempty,email,max=255"`
@@ -264,7 +264,7 @@ type ApproveChurchMemberRequest struct {
 
 // UpdateChurchRequest represents church update input
 type UpdateChurchRequest struct {
-	Fullname        string `json:"fullname" binding:"required,min=1,max=255"`
+	Name        string `json:"name" binding:"required,min=1,max=255"`
 	Address         string `json:"address"`
 	Phone           string `json:"phone" binding:"omitempty,max=50"`
 	Email           string `json:"email" binding:"omitempty,email,max=255"`

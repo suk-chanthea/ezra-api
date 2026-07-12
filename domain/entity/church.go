@@ -4,7 +4,7 @@ import "time"
 
 type Church struct {
 	ID              uint
-	Fullname        string     // Church full name (unique)
+	Name        string     // Church full name (unique)
 	Address         string
 	Phone           string
 	Email           string

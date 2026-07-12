@@ -183,7 +183,7 @@ func (r *bookingRepositoryImpl) modelToEntity(model *BookingModel) *entity.Booki
 		booking.User = &entity.User{
 			ID:        model.User.ID,
 			Username:  model.User.Username,
-			Fullname:  model.User.Fullname,
+			Name:  model.User.Name,
 			Profile:   model.User.Profile,
 			Email:     model.User.Email,
 			Role:      model.User.Role,

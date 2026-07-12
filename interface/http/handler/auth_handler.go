@@ -148,15 +148,15 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	fullname, _ := payload.Claims["name"].(string)
-	if fullname == "" {
-		fullname = email // Fallback to email if name not provided
+	name, _ := payload.Claims["name"].(string)
+	if name == "" {
+		name = email // Fallback to email if name not provided
 	}
 
 	profilePicture, _ := payload.Claims["picture"].(string)
 
 	// Call use case to login/register user
-	response, err := h.authUseCase.GoogleLogin(googleID, email, fullname, profilePicture)
+	response, err := h.authUseCase.GoogleLogin(googleID, email, name, profilePicture)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return

@@ -27,7 +27,7 @@ ON CONFLICT (name) DO NOTHING;
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
-    fullname VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     profile VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     email_verified BOOLEAN DEFAULT false,
@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_users_band_id ON users(band_id);
 -- ============================
 CREATE TABLE IF NOT EXISTS churches (
     id SERIAL PRIMARY KEY,
-    fullname VARCHAR(255) NOT NULL CONSTRAINT uni_churches_fullname UNIQUE,
+    name VARCHAR(255) NOT NULL CONSTRAINT uni_churches_name UNIQUE,
     address TEXT,
     phone VARCHAR(50),
     email VARCHAR(255),
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS churches (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_churches_fullname ON churches(fullname);
+CREATE INDEX IF NOT EXISTS idx_churches_name ON churches(name);
 CREATE INDEX IF NOT EXISTS idx_churches_email ON churches(email);
 CREATE INDEX IF NOT EXISTS idx_churches_denomination ON churches(denomination);
 CREATE INDEX IF NOT EXISTS idx_churches_owner_id ON churches(owner_id);

@@ -194,7 +194,7 @@ DROP INDEX IF EXISTS idx_users_church_status;
 DROP INDEX IF EXISTS idx_users_birthday;
 
 -- Churches indexes
-DROP INDEX IF EXISTS idx_churches_fullname;
+DROP INDEX IF EXISTS idx_churches_name;
 DROP INDEX IF EXISTS idx_churches_email;
 DROP INDEX IF EXISTS idx_churches_denomination;
 DROP INDEX IF EXISTS idx_churches_owner_id;

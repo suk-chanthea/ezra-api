@@ -10,7 +10,7 @@ import (
 
 type ChurchModel struct {
 	ID              uint       `gorm:"primaryKey"`
-	Fullname        string     `gorm:"size:255;not null;uniqueIndex"`
+	Name        string     `gorm:"size:255;not null;uniqueIndex"`
 	Address         string     `gorm:"type:text"`
 	Phone           string     `gorm:"size:50"`
 	Email           string     `gorm:"size:255"`
@@ -60,7 +60,7 @@ func (r *churchRepositoryImpl) FindByID(id uint) (*entity.Church, error) {
 			church.Owner = &entity.User{
 				ID:       ownerModel.ID,
 				Username: ownerModel.Username,
-				Fullname: ownerModel.Fullname,
+				Name: ownerModel.Name,
 				Email:    ownerModel.Email,
 				Profile:  ownerModel.Profile,
 			}
@@ -71,9 +71,9 @@ func (r *churchRepositoryImpl) FindByID(id uint) (*entity.Church, error) {
 	return r.modelToEntity(&model), nil
 }
 
-func (r *churchRepositoryImpl) FindByName(fullname string) (*entity.Church, error) {
+func (r *churchRepositoryImpl) FindByName(name string) (*entity.Church, error) {
 	var model ChurchModel
-	if err := r.db.Where("fullname = ?", fullname).First(&model).Error; err != nil {
+	if err := r.db.Where("name = ?", name).First(&model).Error; err != nil {
 		return nil, err
 	}
 	return r.modelToEntity(&model), nil
@@ -81,7 +81,7 @@ func (r *churchRepositoryImpl) FindByName(fullname string) (*entity.Church, erro
 
 func (r *churchRepositoryImpl) FindAll(limit, offset int) ([]*entity.Church, error) {
 	var models []ChurchModel
-	query := r.db.Order("fullname ASC")
+	query := r.db.Order("name ASC")
 	
 	if limit > 0 {
 		query = query.Limit(limit).Offset(offset)
@@ -96,7 +96,7 @@ func (r *churchRepositoryImpl) FindAll(limit, offset int) ([]*entity.Church, err
 
 func (r *churchRepositoryImpl) FindByDenomination(denomination string, limit, offset int) ([]*entity.Church, error) {
 	var models []ChurchModel
-	query := r.db.Where("denomination = ?", denomination).Order("fullname ASC")
+	query := r.db.Where("denomination = ?", denomination).Order("name ASC")
 	
 	if limit > 0 {
 		query = query.Limit(limit).Offset(offset)
@@ -154,7 +154,7 @@ func (r *churchRepositoryImpl) FindMembers(churchID uint, status string, limit, 
 		users[i] = &entity.User{
 			ID:           model.ID,
 			Username:     model.Username,
-			Fullname:     model.Fullname,
+			Name:     model.Name,
 			Email:        model.Email,
 			Profile:      model.Profile,
 			ChurchID:     model.ChurchID,
@@ -172,7 +172,7 @@ func (r *churchRepositoryImpl) FindMembers(churchID uint, status string, limit, 
 func (r *churchRepositoryImpl) entityToModel(church *entity.Church) *ChurchModel {
 	return &ChurchModel{
 		ID:              church.ID,
-		Fullname:        church.Fullname,
+		Name:        church.Name,
 		Address:         church.Address,
 		Phone:           church.Phone,
 		Email:           church.Email,
@@ -191,7 +191,7 @@ func (r *churchRepositoryImpl) entityToModel(church *entity.Church) *ChurchModel
 func (r *churchRepositoryImpl) modelToEntity(model *ChurchModel) *entity.Church {
 	return &entity.Church{
 		ID:              model.ID,
-		Fullname:        model.Fullname,
+		Name:        	 model.Name,
 		Address:         model.Address,
 		Phone:           model.Phone,
 		Email:           model.Email,

@@ -169,7 +169,7 @@ func (r *supporterRepositoryImpl) modelToEntity(model *SupporterModel) *entity.S
 		supporter.User = &entity.User{
 			ID:       model.User.ID,
 			Username: model.User.Username,
-			Fullname: model.User.Fullname,
+			Name: model.User.Name,
 			Email:    model.User.Email,
 			Profile:  model.User.Profile,
 			Role:     model.User.Role,

@@ -201,7 +201,7 @@ func (uc *bookingUseCase) entityToResponse(booking *entity.Booking) *dto.Booking
 		response.User = &dto.UserResponse{
 			ID:        booking.User.ID,
 			Username:  booking.User.Username,
-			Fullname:  booking.User.Fullname,
+			Name:  booking.User.Name,
 			Profile:   booking.User.Profile,
 			Email:     booking.User.Email,
 			Role:      booking.User.Role,

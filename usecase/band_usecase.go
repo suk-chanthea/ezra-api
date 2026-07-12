@@ -311,7 +311,7 @@ func (uc *bandUseCase) usersToResponses(users []*entity.User) []*dto.UserRespons
 		responses[i] = &dto.UserResponse{
 			ID:        user.ID,
 			Username:  user.Username,
-			Fullname:  user.Fullname,
+			Name:  user.Name,
 			Profile:   user.Profile,
 			Email:     user.Email,
 			Role:      user.Role,

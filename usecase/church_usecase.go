@@ -37,14 +37,14 @@ func NewChurchUseCase(churchRepo repository.ChurchRepository, userRepo repositor
 }
 
 func (uc *churchUseCase) CreateChurch(req *dto.CreateChurchRequest, ownerID uint) (*dto.ChurchResponse, error) {
-	// Check if church with this fullname already exists
-	existing, _ := uc.churchRepo.FindByName(req.Fullname)
+	// Check if church with this name already exists
+	existing, _ := uc.churchRepo.FindByName(req.Name)
 	if existing != nil {
 		return nil, errors.New("church with this name already exists")
 	}
 
 	church := &entity.Church{
-		Fullname:     req.Fullname,
+		Name:     req.Name,
 		Address:      req.Address,
 		Phone:        req.Phone,
 		Email:        req.Email,
@@ -179,15 +179,15 @@ func (uc *churchUseCase) UpdateChurch(id uint, req *dto.UpdateChurchRequest, use
 		return nil, errors.New("only church owner can update church details")
 	}
 
-	// Check if fullname is being changed and if it already exists
-	if req.Fullname != church.Fullname {
-		existing, _ := uc.churchRepo.FindByName(req.Fullname)
+	// Check if name is being changed and if it already exists
+	if req.Name != church.Name {
+		existing, _ := uc.churchRepo.FindByName(req.Name)
 		if existing != nil && existing.ID != id {
 			return nil, errors.New("church with this name already exists")
 		}
 	}
 
-	church.Fullname = req.Fullname
+	church.Name = req.Name
 	church.Address = req.Address
 	church.Phone = req.Phone
 	church.Email = req.Email
@@ -416,7 +416,7 @@ func (uc *churchUseCase) GetApprovedMembers(churchID uint, page, pageSize int) (
 func (uc *churchUseCase) entityToResponse(church *entity.Church) *dto.ChurchResponse {
 	response := &dto.ChurchResponse{
 		ID:              church.ID,
-		Fullname:        church.Fullname,
+		Name:        church.Name,
 		Address:         church.Address,
 		Phone:           church.Phone,
 		Email:           church.Email,
@@ -444,7 +444,7 @@ func (uc *churchUseCase) entityToResponse(church *entity.Church) *dto.ChurchResp
 		response.Owner = &dto.UserResponse{
 			ID:       church.Owner.ID,
 			Username: church.Owner.Username,
-			Fullname: church.Owner.Fullname,
+			Name: church.Owner.Name,
 			Email:    church.Owner.Email,
 			Profile:  church.Owner.Profile,
 		}
@@ -457,7 +457,7 @@ func (uc *churchUseCase) userToResponse(user *entity.User) *dto.UserResponse {
 	return &dto.UserResponse{
 		ID:           user.ID,
 		Username:     user.Username,
-		Fullname:     user.Fullname,
+		Name:     user.Name,
 		Email:        user.Email,
 		Profile:      user.Profile,
 		ChurchID:     user.ChurchID,

@@ -297,7 +297,7 @@ func (uc *supporterUseCase) entityToResponse(supporter *entity.Supporter) *dto.S
 		response.User = &dto.UserResponse{
 			ID:       supporter.User.ID,
 			Username: supporter.User.Username,
-			Fullname: supporter.User.Fullname,
+			Name: supporter.User.Name,
 			Email:    supporter.User.Email,
 			Profile:  supporter.User.Profile,
 			Role:     supporter.User.Role,

@@ -63,7 +63,7 @@ type SuccessResponse struct {
 type UserResponse struct {
 	ID            uint            `json:"id"`
 	Username      string          `json:"username"`
-	Fullname      string          `json:"fullname"`
+	Name      string          `json:"name"`
 	Profile       string          `json:"profile,omitempty"`
 	Email         string          `json:"email"`
 	EmailVerified bool            `json:"email_verified"`
@@ -247,7 +247,7 @@ type SupporterResponse struct {
 // ChurchResponse represents church output
 type ChurchResponse struct {
 	ID              uint         `json:"id"`
-	Fullname        string       `json:"fullname"`
+	Name        string       `json:"name"`
 	Address         string       `json:"address,omitempty"`
 	Phone           string       `json:"phone,omitempty"`
 	Email           string       `json:"email,omitempty"`

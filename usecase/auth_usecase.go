@@ -19,7 +19,7 @@ type AuthUseCase interface {
 	Login(req *dto.LoginRequest) (*dto.AuthResponse, error)
 	Logout(userID uint) error
 	DeleteUser(userID uint) error
-	GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error)
+	GoogleLogin(googleID, email, name, profilePicture string) (*dto.AuthResponse, error)
 	ResetPassword(req *dto.ResetPasswordRequest) (*dto.SuccessResponse, error)
 	GetMe(userID uint) (*dto.UserResponse, error)
 	UpdateMe(userID uint, req *dto.UpdateProfileRequest) (*dto.UserResponse, error)
@@ -201,7 +201,7 @@ func (uc *authUseCase) DeleteUser(userID uint) error {
 	return nil
 }
 
-func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture string) (*dto.AuthResponse, error) {
+func (uc *authUseCase) GoogleLogin(googleID, email, name, profilePicture string) (*dto.AuthResponse, error) {
 	// Check if user already exists with this Google ID
 	user, err := uc.userRepo.FindByProviderID("google", googleID)
 
@@ -216,7 +216,7 @@ func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture str
 		}
 
 		// Create new user with Google OAuth
-		user = entity.NewOAuthUser(email, fullname, "google", googleID)
+		user = entity.NewOAuthUser(email, name, "google", googleID)
 		user.Profile = profilePicture
 
 		// Save to database
@@ -225,7 +225,7 @@ func (uc *authUseCase) GoogleLogin(googleID, email, fullname, profilePicture str
 		}
 	} else {
 		// User exists - update their information from Google
-		user.Fullname = fullname
+		user.Name = name
 		user.Profile = profilePicture
 		user.Email = email // In case Google email changed
 		user.UpdatedAt = time.Now()
@@ -309,7 +309,7 @@ func (uc *authUseCase) GetMe(userID uint) (*dto.UserResponse, error) {
 	return &dto.UserResponse{
 		ID:            user.ID,
 		Username:      user.Username,
-		Fullname:      user.Fullname,
+		Name:      user.Name,
 		Profile:       user.Profile,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
@@ -341,7 +341,7 @@ func (uc *authUseCase) UpdateMe(userID uint, req *dto.UpdateProfileRequest) (*dt
 
 	// Update user fields
 	user.Username = req.Username
-	user.Fullname = req.Fullname
+	user.Name = req.Name
 	user.Profile = req.Profile
 	user.Phone = req.Phone
 	user.Bio = req.Bio
@@ -367,7 +367,7 @@ func (uc *authUseCase) UpdateMe(userID uint, req *dto.UpdateProfileRequest) (*dt
 	return &dto.UserResponse{
 		ID:            user.ID,
 		Username:      user.Username,
-		Fullname:      user.Fullname,
+		Name:      user.Name,
 		Profile:       user.Profile,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,

@@ -138,7 +138,7 @@ func (uc *donationUseCase) InitiatePayment(donationID uint) (*dto.InitiatePaymen
 	// Get customer info
 	var customerName, customerEmail, customerPhone string
 	if donation.DonorType == entity.DonorTypeUser && donation.User != nil {
-		customerName = donation.User.Fullname
+		customerName = donation.User.Name
 		customerEmail = donation.User.Email
 		customerPhone = "" // User might not have phone
 	} else {
@@ -483,7 +483,7 @@ func (uc *donationUseCase) entityToResponse(donation *entity.Donation) *dto.Dona
 		response.User = &dto.UserResponse{
 			ID:        donation.User.ID,
 			Username:  donation.User.Username,
-			Fullname:  donation.User.Fullname,
+			Name:  donation.User.Name,
 			Profile:   donation.User.Profile,
 			Email:     donation.User.Email,
 			Role:      donation.User.Role,

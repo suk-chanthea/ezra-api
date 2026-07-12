@@ -250,7 +250,7 @@ func (r *bandRepositoryImpl) GetBandMembers(ctx context.Context, bandID uint) ([
 		entities[i] = &entity.User{
 			ID:         model.ID,
 			Username:   model.Username,
-			Fullname:   model.Fullname,
+			Name:   model.Name,
 			Profile:    model.Profile,
 			Email:      model.Email,
 			Role:       model.Role,

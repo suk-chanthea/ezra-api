@@ -15,7 +15,7 @@ const (
 type User struct {
 	ID            uint
 	Username      string
-	Fullname      string
+	Name      string
 	Profile       string
 	Email         string
 	EmailVerified bool                   // Whether email has been verified via OTP
@@ -36,10 +36,10 @@ type User struct {
 }
 
 // NewUser creates a new user entity for local registration
-func NewUser(username, fullname, email, password string) *User {
+func NewUser(username, name, email, password string) *User {
 	return &User{
 		Username:      username,
-		Fullname:      fullname,
+		Name:      name,
 		Email:         email,
 		EmailVerified: false, // Must verify email via OTP
 		Password:      password,
@@ -51,10 +51,10 @@ func NewUser(username, fullname, email, password string) *User {
 }
 
 // NewOAuthUser creates a new user entity for OAuth providers
-func NewOAuthUser(email, fullname, provider, providerID string) *User {
+func NewOAuthUser(email, name, provider, providerID string) *User {
 	return &User{
 		Username:      email, // Use email as username for OAuth users
-		Fullname:      fullname,
+		Name:      name,
 		Email:         email,
 		EmailVerified: true, // OAuth providers verify email automatically
 		Password:      "",   // No password for OAuth users
